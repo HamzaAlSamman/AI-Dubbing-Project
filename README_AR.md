@@ -58,3 +58,35 @@ python -m arabic_dubbing_v2.cli preview --master /path/to/translation_master_v2_
 - دفتر Colab الرئيسي: `notebooks/ArabicDubbing_CourseTranslation_V2_6_DynamicGlossary_QA_Colab.ipynb`.
 - خلية الإعداد تستنسخ المستودع العام قراءة فقط، ولا تستبدل مجلد checkout موجوداً أو تغيّر الملفات الأصلية.
 - لا ترفع أصول الفيديو، الصوت، تفريغات الكورس المحمية، أرشيف المحادثات، أو مفاتيح API إلى المستودع العام.
+
+## إضافات تشغيل V2.6.1: الترجمة والصوت المجاني (اختياري)
+
+تم تحديث **الدفتر نفسه** `notebooks/ArabicDubbing_CourseTranslation_V2_6_DynamicGlossary_QA_Colab.ipynb` دون إنشاء دفتر بديل. لا تنفذ هذه الإعدادات تلقائياً خدمات مدفوعة أو أي اتصال خارجي:
+
+### النصوص / الترجمة
+
+| `TRANSLATION_MODE` | الوظيفة | اتصالات خارجية افتراضياً |
+| --- | --- | --- |
+| `reuse_existing` | استخدام الـ`natural_ar` الموجود بدون إعادة ترجمة | لا |
+| `review_existing` | تدقيق ثنائي اللغة بوحدة واحدة أو أكثر عبر `GeminiJSONBackend`، مع تقرير مستقل | يتطلب `RUN_TEXT_API=True` و`ALLOW_ONLINE_TEXT=True` |
+| `regenerate_selected` | أربع مراحل ترجمة جديدة للوحدات المحددة فقط | يتطلب الإذن نفسه، أربع طلبات لكل وحدة |
+
+يستخدم خيار Gemini النصّي `gemini-2.5-flash` نموذجاً تتوافر له فئة API مجانية عند أهلية المشروع وحدود الخطة. **قد تنشأ رسوم إذا فعّلت Billing، ولا يوجد تحقق برمجي من حالة اشتراكك.** يُحفظ السر في `google.colab.userdata` باسم `GEMINI_API_KEY`؛ لا ترفعه إلى GitHub. قد تُستخدم بيانات الطبقة المجانية لتحسين خدمات المزود؛ تأكد من حقوق مشاركة المحتوى. لا يتم ملء `final_dub_ar`.
+
+### معاينة الكلام العربي
+
+| `TTS_ENGINE` | وصف وقيود |
+| --- | --- |
+| `plan_only` | تخطيط فقط، لا صوت ولا اتصال |
+| `edge_online` | أصوات Edge Neural عبر `edge-tts`: خدمة عبر الإنترنت غير رسمية وغير مضمونة للإنتاج؛ يتطلب `RUN_TTS_PREVIEW=True` و`ALLOW_ONLINE_TTS=True` |
+| `mms_local` | `facebook/mms-tts-ara` يعمل محلياً على Colab بعد تنزيل النموذج؛ **ترخيص غير تجاري CC-BY-NC-4.0**؛ يتطلب `RUN_TTS_PREVIEW=True` و`ALLOW_LOCAL_TTS=True` |
+| `gemini_flash_lite` | `gemini-3.8-flash-lite-tts` يدعم العربية وFree Tier عند الأهلية؛ يتطلب مفتاح Gemini والإذن عبر الإنترنت، وقد تنشأ رسوم لمشروع مدفوع |
+
+`MAX_TTS_UNITS = 1` يحول دون إجراء معاينة لجميع الوحدات بالخطأ. تحفظ المعاينات وبيانات مدتها وبصماتها تحت `translation_v2_figma_implementation/temporary_audio_previews_v2_6/` من دون تعديل الملف الأصلي. لا تُنشأ أصوات معتمدة آلياً، ويظل القرار النهائي للمراجع.
+
+### الاختبار المحلي
+
+- `python -m unittest discover -s tests -v`: 21 اختباراً محلياً بما فيها أذونات التنفيذ وحماية المخرجات من الاستبدال.
+- اختُبرت تهيئة Master V2.5 الحقيقي وقراءة وحداته الـ17 وتخطيط الصوت محلياً بلا أي اتصال خارجي، **ولم تُختبر جودة صوت Gemini أو Edge أو MMS فعلياً على جلسة Colab بعد**.
+
+مصادر معلومات المزوّدين: https://ai.google.dev/gemini-api/docs/pricing ، https://ai.google.dev/gemini-api/docs/speech-generation ، https://github.com/rany2/edge-tts ، https://huggingface.co/facebook/mms-tts-ara .
