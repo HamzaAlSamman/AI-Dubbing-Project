@@ -1,0 +1,191 @@
+{
+  "course_id": "marine",
+  "status": "plans_only_NO_LLM_CALLS",
+  "plans": [
+    {
+      "source_term": "coral reef ecosystems",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000",
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "ecosystems need sunlight.",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems need sunlight."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "ecosystems support fish.",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "reef ecosystems",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000",
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "ecosystems",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000",
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "reef ecosystems need",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems need sunlight."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "reef ecosystems support",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "coral reef",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000",
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "ecosystems need",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems need sunlight."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "ecosystems support",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "need sunlight.",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems need sunlight."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "support fish.",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "coral",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000",
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "fish.",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0000"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems support fish."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    },
+    {
+      "source_term": "sunlight.",
+      "scope_course_id": "marine",
+      "domain_hint": "Marine ecosystems",
+      "source_refs": [
+        "tu_0001"
+      ],
+      "context_examples": [
+        "Coral reef ecosystems need sunlight."
+      ],
+      "instruction": "Identify this educational term’s contextual meaning and propose a precise spoken-friendly Arabic equivalent only if supported by the source. Keep code and variables intact. Return JSON: {\"sense\":string|null,\"preferred_ar\":string|null,\"alternatives\":string[],\"keep_english\":boolean|null,\"spoken_form\":string|null,\"needs_review\":boolean,\"rationale\":string}. Do not invent domain facts; do not mark approved."
+    }
+  ]
+}

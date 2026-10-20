@@ -1,0 +1,263 @@
+{
+  "status": "prompts_only_no_provider_calls",
+  "course_id": "marine",
+  "plans": [
+    {
+      "id": "tu_0000",
+      "model_strategy": "multi_pass_single_model_allowed",
+      "context": {
+        "unit_id": "tu_0000",
+        "course": {
+          "id": "marine",
+          "title": "Marine Biology",
+          "description": null,
+          "chapter": null,
+          "lesson": null,
+          "topic": "Marine ecosystems"
+        },
+        "source_text": "Coral reef ecosystems support fish.",
+        "previous": [],
+        "next": [
+          {
+            "id": "tu_0001",
+            "source_text": "Coral reef ecosystems need sunlight."
+          }
+        ],
+        "approved_terminology": [],
+        "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+      },
+      "passes": [
+        {
+          "id": "accurate",
+          "version": "accurate_v2",
+          "instruction": "Target: natural, clear, easy-to-speak Modern Standard Arabic (فصحى مبسطة). Preserve technical meaning, negation, numbers, notation, examples, and teaching steps. Do not fabricate facts, names, gender, or visual cues. Preserve identifiers and code. Produce faithful accurate_ar without shortening. Output JSON {\"accurate_ar\": string, \"flags\": string[]}.",
+          "input": {
+            "source_text": "Coral reef ecosystems support fish.",
+            "context": {
+              "unit_id": "tu_0000",
+              "course": {
+                "id": "marine",
+                "title": "Marine Biology",
+                "description": null,
+                "chapter": null,
+                "lesson": null,
+                "topic": "Marine ecosystems"
+              },
+              "source_text": "Coral reef ecosystems support fish.",
+              "previous": [],
+              "next": [
+                {
+                  "id": "tu_0001",
+                  "source_text": "Coral reef ecosystems need sunlight."
+                }
+              ],
+              "approved_terminology": [],
+              "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+            },
+            "existing_accurate_ar": "تدعم الشعاب المرجانية الأسماك."
+          }
+        },
+        {
+          "id": "natural",
+          "version": "natural_v2",
+          "instruction": "Target: natural, clear, easy-to-speak Modern Standard Arabic (فصحى مبسطة). Preserve technical meaning, negation, numbers, notation, examples, and teaching steps. Do not fabricate facts, names, gender, or visual cues. Preserve identifiers and code. Transform accurate_ar into spoken natural_ar without changing meaning. Output JSON {\"natural_ar\": string, \"flags\": string[]}.",
+          "input": {
+            "accurate_ar": "<generated-or-reviewed-accurate_ar>",
+            "source_text": "Coral reef ecosystems support fish.",
+            "context": {
+              "unit_id": "tu_0000",
+              "course": {
+                "id": "marine",
+                "title": "Marine Biology",
+                "description": null,
+                "chapter": null,
+                "lesson": null,
+                "topic": "Marine ecosystems"
+              },
+              "source_text": "Coral reef ecosystems support fish.",
+              "previous": [],
+              "next": [
+                {
+                  "id": "tu_0001",
+                  "source_text": "Coral reef ecosystems need sunlight."
+                }
+              ],
+              "approved_terminology": [],
+              "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+            }
+          }
+        },
+        {
+          "id": "timing_candidate",
+          "version": "timing_v2",
+          "instruction": "Target: natural, clear, easy-to-speak Modern Standard Arabic (فصحى مبسطة). Preserve technical meaning, negation, numbers, notation, examples, and teaching steps. Do not fabricate facts, names, gender, or visual cues. Preserve identifiers and code. Produce a timing_candidate_ar only if meaning is preserved. Never silently omit a step. Output JSON {\"timing_candidate_ar\": string, \"flags\": string[]}.",
+          "input": {
+            "natural_ar": "<generated-or-reviewed-natural_ar>",
+            "target_duration_seconds": 4.0
+          }
+        },
+        {
+          "id": "semantic_qa",
+          "version": "semanticqa_v2",
+          "instruction": "Compare English source to each Arabic candidate. Check meaning, terminology, numbers, identifiers, negation, steps, modality, hallucination and pronouns. Return specific evidence; NEVER set human_approved or final_dub_ar. Output JSON {\"issues\": string[], \"needs_review\": boolean, \"rationale\": string}.",
+          "input": {
+            "source_text": "Coral reef ecosystems support fish.",
+            "accurate_ar": "<draft>",
+            "natural_ar": "<draft>",
+            "timing_candidate_ar": "<draft>",
+            "context": {
+              "unit_id": "tu_0000",
+              "course": {
+                "id": "marine",
+                "title": "Marine Biology",
+                "description": null,
+                "chapter": null,
+                "lesson": null,
+                "topic": "Marine ecosystems"
+              },
+              "source_text": "Coral reef ecosystems support fish.",
+              "previous": [],
+              "next": [
+                {
+                  "id": "tu_0001",
+                  "source_text": "Coral reef ecosystems need sunlight."
+                }
+              ],
+              "approved_terminology": [],
+              "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "tu_0001",
+      "model_strategy": "multi_pass_single_model_allowed",
+      "context": {
+        "unit_id": "tu_0001",
+        "course": {
+          "id": "marine",
+          "title": "Marine Biology",
+          "description": null,
+          "chapter": null,
+          "lesson": null,
+          "topic": "Marine ecosystems"
+        },
+        "source_text": "Coral reef ecosystems need sunlight.",
+        "previous": [
+          {
+            "id": "tu_0000",
+            "source_text": "Coral reef ecosystems support fish."
+          }
+        ],
+        "next": [],
+        "approved_terminology": [],
+        "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+      },
+      "passes": [
+        {
+          "id": "accurate",
+          "version": "accurate_v2",
+          "instruction": "Target: natural, clear, easy-to-speak Modern Standard Arabic (فصحى مبسطة). Preserve technical meaning, negation, numbers, notation, examples, and teaching steps. Do not fabricate facts, names, gender, or visual cues. Preserve identifiers and code. Produce faithful accurate_ar without shortening. Output JSON {\"accurate_ar\": string, \"flags\": string[]}.",
+          "input": {
+            "source_text": "Coral reef ecosystems need sunlight.",
+            "context": {
+              "unit_id": "tu_0001",
+              "course": {
+                "id": "marine",
+                "title": "Marine Biology",
+                "description": null,
+                "chapter": null,
+                "lesson": null,
+                "topic": "Marine ecosystems"
+              },
+              "source_text": "Coral reef ecosystems need sunlight.",
+              "previous": [
+                {
+                  "id": "tu_0000",
+                  "source_text": "Coral reef ecosystems support fish."
+                }
+              ],
+              "next": [],
+              "approved_terminology": [],
+              "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+            },
+            "existing_accurate_ar": "تحتاج النظم المرجانية إلى ضوء الشمس."
+          }
+        },
+        {
+          "id": "natural",
+          "version": "natural_v2",
+          "instruction": "Target: natural, clear, easy-to-speak Modern Standard Arabic (فصحى مبسطة). Preserve technical meaning, negation, numbers, notation, examples, and teaching steps. Do not fabricate facts, names, gender, or visual cues. Preserve identifiers and code. Transform accurate_ar into spoken natural_ar without changing meaning. Output JSON {\"natural_ar\": string, \"flags\": string[]}.",
+          "input": {
+            "accurate_ar": "<generated-or-reviewed-accurate_ar>",
+            "source_text": "Coral reef ecosystems need sunlight.",
+            "context": {
+              "unit_id": "tu_0001",
+              "course": {
+                "id": "marine",
+                "title": "Marine Biology",
+                "description": null,
+                "chapter": null,
+                "lesson": null,
+                "topic": "Marine ecosystems"
+              },
+              "source_text": "Coral reef ecosystems need sunlight.",
+              "previous": [
+                {
+                  "id": "tu_0000",
+                  "source_text": "Coral reef ecosystems support fish."
+                }
+              ],
+              "next": [],
+              "approved_terminology": [],
+              "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+            }
+          }
+        },
+        {
+          "id": "timing_candidate",
+          "version": "timing_v2",
+          "instruction": "Target: natural, clear, easy-to-speak Modern Standard Arabic (فصحى مبسطة). Preserve technical meaning, negation, numbers, notation, examples, and teaching steps. Do not fabricate facts, names, gender, or visual cues. Preserve identifiers and code. Produce a timing_candidate_ar only if meaning is preserved. Never silently omit a step. Output JSON {\"timing_candidate_ar\": string, \"flags\": string[]}.",
+          "input": {
+            "natural_ar": "<generated-or-reviewed-natural_ar>",
+            "target_duration_seconds": 4.0
+          }
+        },
+        {
+          "id": "semantic_qa",
+          "version": "semanticqa_v2",
+          "instruction": "Compare English source to each Arabic candidate. Check meaning, terminology, numbers, identifiers, negation, steps, modality, hallucination and pronouns. Return specific evidence; NEVER set human_approved or final_dub_ar. Output JSON {\"issues\": string[], \"needs_review\": boolean, \"rationale\": string}.",
+          "input": {
+            "source_text": "Coral reef ecosystems need sunlight.",
+            "accurate_ar": "<draft>",
+            "natural_ar": "<draft>",
+            "timing_candidate_ar": "<draft>",
+            "context": {
+              "unit_id": "tu_0001",
+              "course": {
+                "id": "marine",
+                "title": "Marine Biology",
+                "description": null,
+                "chapter": null,
+                "lesson": null,
+                "topic": "Marine ecosystems"
+              },
+              "source_text": "Coral reef ecosystems need sunlight.",
+              "previous": [
+                {
+                  "id": "tu_0000",
+                  "source_text": "Coral reef ecosystems support fish."
+                }
+              ],
+              "next": [],
+              "approved_terminology": [],
+              "note": "Unknown visual context must not be invented; no asserted translation from adjacent data."
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "notice": "No LLM executed. Do not put final_dub_ar into any output before a human approval gate."
+}

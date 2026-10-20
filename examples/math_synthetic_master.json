@@ -1,0 +1,62 @@
+{
+  "schema_version": "2.0",
+  "course": {
+    "id": "math",
+    "title": "Pure Mathematics",
+    "topic": "Linear algebra"
+  },
+  "terminology": [],
+  "source_segments": [],
+  "translation_units": [
+    {
+      "id": "tu_0000",
+      "speaker": {
+        "id": "SPEAKER_00"
+      },
+      "source_segment_ids": [
+        "seg_0000"
+      ],
+      "source_refs": [],
+      "timing": {
+        "source_start": 0.0,
+        "source_end": 4.0
+      },
+      "source": {
+        "text": "Matrix multiplication uses rows and columns."
+      },
+      "translation": {
+        "accurate_ar": "يستخدم ضرب المصفوفات الصفوف والأعمدة.",
+        "natural_ar": "يستخدم ضرب المصفوفات الصفوف والأعمدة.",
+        "final_dub_ar": null
+      },
+      "review": {
+        "status": "pending"
+      }
+    },
+    {
+      "id": "tu_0001",
+      "speaker": {
+        "id": "SPEAKER_00"
+      },
+      "source_segment_ids": [
+        "seg_0001"
+      ],
+      "source_refs": [],
+      "timing": {
+        "source_start": 5.0,
+        "source_end": 9.0
+      },
+      "source": {
+        "text": "Matrix multiplication follows algebraic rules."
+      },
+      "translation": {
+        "accurate_ar": "يتبع ضرب المصفوفات قواعد جبرية.",
+        "natural_ar": "يتبع ضرب المصفوفات قواعد جبرية.",
+        "final_dub_ar": null
+      },
+      "review": {
+        "status": "pending"
+      }
+    }
+  ]
+}

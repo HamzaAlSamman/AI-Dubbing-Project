@@ -1,0 +1,400 @@
+{
+  "schema_version": "2.0",
+  "course": {
+    "id": "cooking",
+    "title": "Culinary Techniques",
+    "topic": "Baking bread"
+  },
+  "terminology": [],
+  "source_segments": [],
+  "translation_units": [
+    {
+      "id": "tu_0000",
+      "speaker": {
+        "id": "SPEAKER_00"
+      },
+      "source_segment_ids": [
+        "seg_0000"
+      ],
+      "source_refs": [],
+      "timing": {
+        "source_start": 0.0,
+        "source_end": 4.0
+      },
+      "source": {
+        "text": "Yeast fermentation changes dough texture."
+      },
+      "translation": {
+        "accurate_ar": "يغيّر تخمير الخميرة قوام العجين.",
+        "natural_ar": "يغيّر تخمير الخميرة قوام العجين.",
+        "final_dub_ar": null
+      },
+      "review": {
+        "status": "pending"
+      },
+      "analysis_v2": {
+        "translation_origin": "existing_source_master_not_regenerated",
+        "accurate_ar_available": true,
+        "natural_ar_available": true,
+        "final_dub_ar_source_value_preserved_not_approved": false,
+        "qa": {
+          "status": "needs_review",
+          "requires_review": true,
+          "checks": {
+            "numbers_preserved": true,
+            "code_preserved": true,
+            "negation_preserved": null,
+            "meaning_preserved": null,
+            "technical_terms_preserved": null,
+            "instruction_strength_preserved": null,
+            "sequence_preserved": null,
+            "hallucination_detected": null
+          },
+          "issues": [
+            "bilingual_semantic_qa_not_performed"
+          ],
+          "missing_numbers": [],
+          "missing_code": [],
+          "note": "Heuristic checks cannot substitute for bilingual semantic and domain review."
+        },
+        "review_gate": "pending_human_bilingual_review",
+        "target_duration_seconds": 4.0,
+        "estimated_duration_seconds": null,
+        "timing_status": "not_measured_by_tts",
+        "spoken_form_status": "not_reviewed",
+        "processing": {
+          "pipeline": "translation_enrichment_v2",
+          "prompt_calls": 0,
+          "tts_calls": 0
+        }
+      }
+    },
+    {
+      "id": "tu_0001",
+      "speaker": {
+        "id": "SPEAKER_00"
+      },
+      "source_segment_ids": [
+        "seg_0001"
+      ],
+      "source_refs": [],
+      "timing": {
+        "source_start": 5.0,
+        "source_end": 9.0
+      },
+      "source": {
+        "text": "Yeast fermentation needs warm water."
+      },
+      "translation": {
+        "accurate_ar": "يتطلب تخمير الخميرة ماءً دافئاً.",
+        "natural_ar": "يتطلب تخمير الخميرة ماءً دافئاً.",
+        "final_dub_ar": null
+      },
+      "review": {
+        "status": "pending"
+      },
+      "analysis_v2": {
+        "translation_origin": "existing_source_master_not_regenerated",
+        "accurate_ar_available": true,
+        "natural_ar_available": true,
+        "final_dub_ar_source_value_preserved_not_approved": false,
+        "qa": {
+          "status": "needs_review",
+          "requires_review": true,
+          "checks": {
+            "numbers_preserved": true,
+            "code_preserved": true,
+            "negation_preserved": null,
+            "meaning_preserved": null,
+            "technical_terms_preserved": null,
+            "instruction_strength_preserved": null,
+            "sequence_preserved": null,
+            "hallucination_detected": null
+          },
+          "issues": [
+            "bilingual_semantic_qa_not_performed"
+          ],
+          "missing_numbers": [],
+          "missing_code": [],
+          "note": "Heuristic checks cannot substitute for bilingual semantic and domain review."
+        },
+        "review_gate": "pending_human_bilingual_review",
+        "target_duration_seconds": 4.0,
+        "estimated_duration_seconds": null,
+        "timing_status": "not_measured_by_tts",
+        "spoken_form_status": "not_reviewed",
+        "processing": {
+          "pipeline": "translation_enrichment_v2",
+          "prompt_calls": 0,
+          "tts_calls": 0
+        }
+      }
+    }
+  ],
+  "translation_v2_metadata": {
+    "implementation_version": "2.0.0-dev",
+    "documented_scope": "Educational courses; initial English and single speaker",
+    "source_master_filename": "examples/cooking_synthetic_master.json",
+    "source_master_sha256": "d60e5ae6e5bea917dad1e476fab8938e2bc85b2d70bdc4de2a063cc34aac414e",
+    "source_master_data_fingerprint": "d282caaa0e5a08a427da1f8f632828370308a5b09132a58d95e8083e3c8f103f",
+    "source_fields_unchanged": true,
+    "course": {
+      "id": "cooking",
+      "title": "Culinary Techniques",
+      "topic": "Baking bread",
+      "metadata_status": "provided"
+    },
+    "context_links": {
+      "tu_0000": {
+        "previous_unit_ids": [],
+        "next_unit_ids": [
+          "tu_0001"
+        ]
+      },
+      "tu_0001": {
+        "previous_unit_ids": [
+          "tu_0000"
+        ],
+        "next_unit_ids": []
+      }
+    },
+    "translation_execution": "NOT_RUN",
+    "tts_execution": "NOT_RUN",
+    "human_final_approval": false,
+    "note": "All V2 data is derived. Source ASR, timestamps, existing translations, IDs and word refs are unchanged."
+  },
+  "terminology_v2": {
+    "course_id": "cooking",
+    "domain_analysis": {
+      "domain_hint": "Baking bread",
+      "evidence": "course.topic",
+      "status": "metadata_derived_unvalidated"
+    },
+    "approved": [],
+    "candidates": [
+      {
+        "source_term": "changes dough texture.",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Yeast fermentation changes dough texture."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 5.2
+        }
+      },
+      {
+        "source_term": "needs warm water.",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Yeast fermentation needs warm water."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 5.2
+        }
+      },
+      {
+        "source_term": "dough texture.",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Yeast fermentation changes dough texture."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "warm water.",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Yeast fermentation needs warm water."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "yeast fermentation",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Yeast fermentation changes dough texture."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "fermentation",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Yeast fermentation changes dough texture."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.4
+        }
+      },
+      {
+        "source_term": "texture.",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Yeast fermentation changes dough texture."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.4
+        }
+      },
+      {
+        "source_term": "water.",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Yeast fermentation needs warm water."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.4
+        }
+      },
+      {
+        "source_term": "yeast",
+        "domain": "Baking bread",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Yeast fermentation changes dough texture."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.4
+        }
+      }
+    ],
+    "unverified_existing_terms": [],
+    "review_required": true,
+    "policy": "No preloaded course/domain-specific glossary; validate sense within this course."
+  },
+  "translation_v2_report": {
+    "translation_unit_count": 2,
+    "source_master_unchanged": true,
+    "units_with_natural_ar": 2,
+    "units_needing_bilingual_review": 2,
+    "approved_for_final_tts": 0,
+    "glossary_candidates": 9,
+    "approved_terms_for_this_course": 0,
+    "previous_unverified_terms": 0,
+    "flags": {
+      "tu_0000": [
+        "bilingual_semantic_qa_not_performed"
+      ],
+      "tu_0001": [
+        "bilingual_semantic_qa_not_performed"
+      ]
+    },
+    "note": "Mechanical flags are not a pass/fail semantic score; all units remain pending."
+  }
+}

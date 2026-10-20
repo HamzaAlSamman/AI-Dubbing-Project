@@ -1,0 +1,534 @@
+{
+  "schema_version": "2.0",
+  "course": {
+    "id": "marine",
+    "title": "Marine Biology",
+    "topic": "Marine ecosystems"
+  },
+  "terminology": [],
+  "source_segments": [],
+  "translation_units": [
+    {
+      "id": "tu_0000",
+      "speaker": {
+        "id": "SPEAKER_00"
+      },
+      "source_segment_ids": [
+        "seg_0000"
+      ],
+      "source_refs": [],
+      "timing": {
+        "source_start": 0.0,
+        "source_end": 4.0
+      },
+      "source": {
+        "text": "Coral reef ecosystems support fish."
+      },
+      "translation": {
+        "accurate_ar": "تدعم الشعاب المرجانية الأسماك.",
+        "natural_ar": "تدعم الشعاب المرجانية الأسماك.",
+        "final_dub_ar": null
+      },
+      "review": {
+        "status": "pending"
+      },
+      "analysis_v2": {
+        "translation_origin": "existing_source_master_not_regenerated",
+        "accurate_ar_available": true,
+        "natural_ar_available": true,
+        "final_dub_ar_source_value_preserved_not_approved": false,
+        "qa": {
+          "status": "needs_review",
+          "requires_review": true,
+          "checks": {
+            "numbers_preserved": true,
+            "code_preserved": true,
+            "negation_preserved": null,
+            "meaning_preserved": null,
+            "technical_terms_preserved": null,
+            "instruction_strength_preserved": null,
+            "sequence_preserved": null,
+            "hallucination_detected": null
+          },
+          "issues": [
+            "bilingual_semantic_qa_not_performed"
+          ],
+          "missing_numbers": [],
+          "missing_code": [],
+          "note": "Heuristic checks cannot substitute for bilingual semantic and domain review."
+        },
+        "review_gate": "pending_human_bilingual_review",
+        "target_duration_seconds": 4.0,
+        "estimated_duration_seconds": null,
+        "timing_status": "not_measured_by_tts",
+        "spoken_form_status": "not_reviewed",
+        "processing": {
+          "pipeline": "translation_enrichment_v2",
+          "prompt_calls": 0,
+          "tts_calls": 0
+        }
+      }
+    },
+    {
+      "id": "tu_0001",
+      "speaker": {
+        "id": "SPEAKER_00"
+      },
+      "source_segment_ids": [
+        "seg_0001"
+      ],
+      "source_refs": [],
+      "timing": {
+        "source_start": 5.0,
+        "source_end": 9.0
+      },
+      "source": {
+        "text": "Coral reef ecosystems need sunlight."
+      },
+      "translation": {
+        "accurate_ar": "تحتاج النظم المرجانية إلى ضوء الشمس.",
+        "natural_ar": "تحتاج النظم المرجانية إلى ضوء الشمس.",
+        "final_dub_ar": null
+      },
+      "review": {
+        "status": "pending"
+      },
+      "analysis_v2": {
+        "translation_origin": "existing_source_master_not_regenerated",
+        "accurate_ar_available": true,
+        "natural_ar_available": true,
+        "final_dub_ar_source_value_preserved_not_approved": false,
+        "qa": {
+          "status": "needs_review",
+          "requires_review": true,
+          "checks": {
+            "numbers_preserved": true,
+            "code_preserved": true,
+            "negation_preserved": null,
+            "meaning_preserved": null,
+            "technical_terms_preserved": null,
+            "instruction_strength_preserved": null,
+            "sequence_preserved": null,
+            "hallucination_detected": null
+          },
+          "issues": [
+            "bilingual_semantic_qa_not_performed"
+          ],
+          "missing_numbers": [],
+          "missing_code": [],
+          "note": "Heuristic checks cannot substitute for bilingual semantic and domain review."
+        },
+        "review_gate": "pending_human_bilingual_review",
+        "target_duration_seconds": 4.0,
+        "estimated_duration_seconds": null,
+        "timing_status": "not_measured_by_tts",
+        "spoken_form_status": "not_reviewed",
+        "processing": {
+          "pipeline": "translation_enrichment_v2",
+          "prompt_calls": 0,
+          "tts_calls": 0
+        }
+      }
+    }
+  ],
+  "translation_v2_metadata": {
+    "implementation_version": "2.0.0-dev",
+    "documented_scope": "Educational courses; initial English and single speaker",
+    "source_master_filename": "examples/marine_synthetic_master.json",
+    "source_master_sha256": "38526358541b9bd9e71cc90079ee0e9f92d1a0a2b5f0d5f80a0ca4521e0c4aba",
+    "source_master_data_fingerprint": "01761e65cf4a81f63b1e88b4f8a28b666eb6cea23ea2c05a3061fe55c4812fd9",
+    "source_fields_unchanged": true,
+    "course": {
+      "id": "marine",
+      "title": "Marine Biology",
+      "topic": "Marine ecosystems",
+      "metadata_status": "provided"
+    },
+    "context_links": {
+      "tu_0000": {
+        "previous_unit_ids": [],
+        "next_unit_ids": [
+          "tu_0001"
+        ]
+      },
+      "tu_0001": {
+        "previous_unit_ids": [
+          "tu_0000"
+        ],
+        "next_unit_ids": []
+      }
+    },
+    "translation_execution": "NOT_RUN",
+    "tts_execution": "NOT_RUN",
+    "human_final_approval": false,
+    "note": "All V2 data is derived. Source ASR, timestamps, existing translations, IDs and word refs are unchanged."
+  },
+  "terminology_v2": {
+    "course_id": "marine",
+    "domain_analysis": {
+      "domain_hint": "Marine ecosystems",
+      "evidence": "course.topic",
+      "status": "metadata_derived_unvalidated"
+    },
+    "approved": [],
+    "candidates": [
+      {
+        "source_term": "coral reef ecosystems",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 7.2
+        }
+      },
+      {
+        "source_term": "ecosystems need sunlight.",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems need sunlight."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 7.2
+        }
+      },
+      {
+        "source_term": "ecosystems support fish.",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 7.2
+        }
+      },
+      {
+        "source_term": "reef ecosystems",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 6.8
+        }
+      },
+      {
+        "source_term": "ecosystems",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 6.4
+        }
+      },
+      {
+        "source_term": "reef ecosystems need",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems need sunlight."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 5.2
+        }
+      },
+      {
+        "source_term": "reef ecosystems support",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 5.2
+        }
+      },
+      {
+        "source_term": "coral reef",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "ecosystems need",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems need sunlight."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "ecosystems support",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": true,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "need sunlight.",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems need sunlight."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "support fish.",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.8
+        }
+      },
+      {
+        "source_term": "coral",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000",
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 2,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.4
+        }
+      },
+      {
+        "source_term": "fish.",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0000"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems support fish."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.4
+        }
+      },
+      {
+        "source_term": "sunlight.",
+        "domain": "Marine ecosystems",
+        "sense": null,
+        "preferred_ar": null,
+        "alternatives": [],
+        "keep_english": null,
+        "source_refs": [
+          "tu_0001"
+        ],
+        "context_examples": [
+          "Coral reef ecosystems need sunlight."
+        ],
+        "occurrences_in_units": 1,
+        "review_status": "candidate",
+        "spoken_form": null,
+        "provenance": {
+          "method": "extractive_ngrams_v1",
+          "metadata_overlap": false,
+          "score_for_ranking_only": 4.4
+        }
+      }
+    ],
+    "unverified_existing_terms": [],
+    "review_required": true,
+    "policy": "No preloaded course/domain-specific glossary; validate sense within this course."
+  },
+  "translation_v2_report": {
+    "translation_unit_count": 2,
+    "source_master_unchanged": true,
+    "units_with_natural_ar": 2,
+    "units_needing_bilingual_review": 2,
+    "approved_for_final_tts": 0,
+    "glossary_candidates": 15,
+    "approved_terms_for_this_course": 0,
+    "previous_unverified_terms": 0,
+    "flags": {
+      "tu_0000": [
+        "bilingual_semantic_qa_not_performed"
+      ],
+      "tu_0001": [
+        "bilingual_semantic_qa_not_performed"
+      ]
+    },
+    "note": "Mechanical flags are not a pass/fail semantic score; all units remain pending."
+  }
+}
