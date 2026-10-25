@@ -56,7 +56,9 @@ def detect_domain(course, units, candidates=None):
 
 
 def _tokens(text):
-    return [m.group(0) for m in _WORD.finditer(text)]
+    # End-of-sentence punctuation is not part of an educational term.
+    # Preserve internal dots in code identifiers such as numpy.mean.
+    return [m.group(0).rstrip(".") for m in _WORD.finditer(text)]
 
 
 def _eligible(word):
