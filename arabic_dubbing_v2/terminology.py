@@ -8,6 +8,8 @@ from collections import Counter, defaultdict
 from .common import clone, fingerprint, unit_text
 
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9_+#.-]*")
+_SINGLE_SYMBOL = re.compile(r"(?<![\w'’])([A-Za-z])(?![\w])")
+_CONNECTOR_PREFIXES = {'for', 'to', 'of', 'in', 'on', 'by', 'with', 'without'}
 _SKIP = set('the and for that with this from your what where while then than have has had they them their there here were was are you can could would should about into onto over under after before because which these those also just very will been being when how why now let lets our we it its of to in on at by is a an or as if but so no not do did does one two first second next step right use using used got get make makes made such like look see seeable some other many each any all more less most much only same new old too example examples thing things way ways today course lesson video part okay hello welcome thank thanks back basically going gonna actually really little lot name known say says said talk talking take taking give given find found different various well idea ideas stuff something someone somebody he she him her his hers their its who what'.split())
 _GENERIC_TITLES = {'course pilot','pilot course','untitled','lesson','unknown','none',''}
 
@@ -73,16 +75,31 @@ def extract_candidates(units, course, *, max_terms=70):
     frequency, technical identifiers and metadata terms; store source refs.
     """
     counts, refs, examples = Counter(), defaultdict(list), {}
+    symbol_counts, symbol_refs, symbol_examples = Counter(), defaultdict(list), {}
     for u in units:
         source = unit_text(u)
         toks = _tokens(source)
         uid = str(u.get('id'))
         seen = set()
+        seen_symbols = set()
+        for match in _SINGLE_SYMBOL.finditer(source):
+            symbol = match.group(1)
+            # Articles and first-person pronouns are not notation evidence.
+            if symbol.casefold() in ('a','i') or symbol in seen_symbols:
+                continue
+            seen_symbols.add(symbol)
+            symbol_counts[symbol] += 1
+            if len(symbol_refs[symbol]) < 12: symbol_refs[symbol].append(uid)
+            symbol_examples.setdefault(symbol, source[:360])
         for n in (1, 2, 3):
             for i in range(len(toks) - n + 1):
                 part = toks[i:i+n]
                 if not all(_eligible(x) for x in part):
-                    continue
+                    # Phrases can begin with a generic connector such as 'for'.
+                    # Keep candidates only if the source phrase repeats across units.
+                    if not (n == 2 and part[0].casefold() in _CONNECTOR_PREFIXES
+                            and _eligible(part[1])):
+                        continue
                 if n == 1 and not (re.search(r'[A-Z][a-z]+[A-Z]|[a-z]+[A-Z]|[_+#]|[A-Z]{2,}', part[0])
                                    or len(part[0]) >= 5):
                     continue
@@ -100,13 +117,18 @@ def extract_candidates(units, course, *, max_terms=70):
         matches_metadata = any(w in metadata_tokens for w in words)
         tech = bool(re.search(r'[+#_.]|\d', term))
         # Singletons may be generic words; do not flood the glossary.
-        if n < 2 and not (matches_metadata and len(words) > 1) and not tech:
+        variant_of_repeated_connector = (
+            len(words)==2 and words[0] in _CONNECTOR_PREFIXES and
+            (counts.get(term+'s',0)>0 or
+             (term.endswith('s') and counts.get(term[:-1],0)>0)))
+        if n < 2 and not (matches_metadata and len(words) > 1) and not tech and not variant_of_repeated_connector:
             continue
         score = n*2 + len(words)*0.4 + (2 if matches_metadata else 0) + (2 if tech else 0)
         ranked.append((score, term, n, matches_metadata))
     ranked.sort(key=lambda x:(-x[0],x[1]))
     entries=[]
-    for score, term, n, mm in ranked[:max_terms]:
+    # Avoid candidate flooding: ordinary multiword phrases have priority.
+    for score, term, n, mm in ranked[:max_terms - min(4,len(symbol_counts))]:
         entries.append({'source_term': term, 'domain': None, 'sense': None,
                         'preferred_ar': None, 'alternatives': [], 'keep_english': None,
                         'source_refs': refs[term], 'context_examples': [examples[term]],
@@ -114,6 +136,19 @@ def extract_candidates(units, course, *, max_terms=70):
                         'spoken_form': None, 'provenance': {'method':'extractive_ngrams_v1',
                                                           'metadata_overlap': mm,
                                                           'score_for_ranking_only': round(score,2)}})
+    # Single-letter symbols matter for instructional speech (e.g. variable M/y),
+    # but may also be nontechnical. Preserve case; do not infer pronunciation.
+    for symbol, n in sorted(symbol_counts.items(), key=lambda x:(-x[1],x[0])):
+        if len(entries) >= max_terms: break
+        entries.append({'source_term':symbol,'domain':None,'sense':None,
+                        'preferred_ar':None,'alternatives':[],'keep_english':None,
+                        'source_refs':symbol_refs[symbol],
+                        'context_examples':[symbol_examples[symbol]],
+                        'occurrences_in_units':n,'review_status':'candidate',
+                        'spoken_form':None,
+                        'provenance':{'method':'single_letter_symbol_candidate_v2',
+                                      'case_sensitive':True,
+                                      'note':'May be notation or a nontechnical letter; context review required.'}})
     return entries
 
 

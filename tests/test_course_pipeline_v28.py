@@ -138,6 +138,34 @@ class GenericPipelineTests(unittest.TestCase):
         self.assertTrue(reused['audit'][0]['evidence_unit_ids'])
         self.assertFalse(cross_lesson_consistency(reg,new_lessons,reused)['findings'])
 
+    def test_symbol_and_connector_phrase_candidates_preserve_case_and_uncertainty(self):
+        from arabic_dubbing_v2.terminology import extract_candidates
+        from arabic_dubbing_v2.workflow import enrich_master
+        raw=demo_master()
+        raw['translation_units'][0]['source']['text']='Use M training examples in a for loop to update y.'
+        raw['translation_units'][1]['source']['text']='Without a for loop, y and M remain symbols.'
+        p=enrich_master(raw)
+        found={t['source_term']:t for t in extract_candidates(p['translation_units'],p['translation_v2_metadata']['course'])}
+        self.assertIn('M',found)
+        self.assertIn('y',found)
+        self.assertIn('for loop',found)
+        for term in ('M','y','for loop'):
+            self.assertIsNone(found[term]['preferred_ar'])
+            self.assertEqual(found[term]['review_status'],'candidate')
+        self.assertEqual(found['M']['provenance']['case_sensitive'],True)
+
+    def test_connector_phrase_singular_plural_forms_are_kept_distinct(self):
+        from arabic_dubbing_v2.terminology import extract_candidates
+        raw=demo_master()
+        raw['translation_units'][0]['source']['text']='An instructor uses a for loop in this example.'
+        raw['translation_units'][1]['source']['text']='Many for loops appear in this lesson.'
+        raw['translation_units'][2]['source']['text']='It\'s a new concept.'
+        p=enrich_master(raw)
+        forms={e['source_term'] for e in extract_candidates(p['translation_units'],p['translation_v2_metadata']['course'])}
+        self.assertIn('for loop',forms)
+        self.assertIn('for loops',forms)
+        self.assertNotIn('s',forms)
+
     def test_real_v25_source_and_tts_history_only_read(self):
         source=Path('/mnt/data/translation_master_v2_5_editorial_candidate.json')
         pilot=Path('/mnt/data/tts_pilot_3_manifest_qa35lite_20261012T161432Z.json')
