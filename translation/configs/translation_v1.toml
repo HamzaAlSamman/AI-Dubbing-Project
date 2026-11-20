@@ -1,0 +1,43 @@
+# Translation step configuration (v1). Every value here is copied into the run manifest and
+# hashed: two runs with the same config hash used exactly the same settings.
+
+[voice]
+# Speaking rate of the TTS voice in Arabic letters per second (diacritics, spaces, punctuation
+# not counted). Measured on 123 natural-speed Habibi MSA clips, 2026-11-16 (cell 19.1).
+# Predictor vs real clips: median abs error 10.9 %, same fits/overrun verdict in 84.6 %.
+name = "habibi_msa"
+letters_per_second = 10.584
+# Predict duration on the spoken form (variables spelled in Arabic, digits as words) instead of
+# the written Arabic letters only; the written form undercounts notation-heavy units.
+count_spoken_form = true
+
+[budget]
+# Letter range asked from the length-controlled LLM: [low x slot, high x window] at the voice rate.
+low = 0.90
+high = 1.05
+short_factor = 0.80          # the 'short' variant aims at 80 % of the maximum
+
+[gate]
+qe_max = 5.0                 # MetricX-24 QE (0 best .. 25 worst)
+spelling_max = 0.05          # share of misspelled Arabic words (allow-listed terms excluded)
+min_ratio = 0.60             # predicted / slot below this = too short (long silence)
+max_speedup = 1.25           # bounded speed-up allowed by the audio stage
+tiny_slot_s = 2.0            # slots shorter than this get a merge hint when they overrun
+spelling_allowlist = []      # extra accepted technical words (consensus words are added automatically)
+
+[refine]
+enabled = true
+max_attempts = 3
+drafts_shown = 2
+max_qe_worse = 0.5           # duration-only edits may not lose more than this much QE
+
+[models]
+qe = "google/metricx-24-hybrid-large-v2p6"
+mt = "tencent/HY-MT1.5-7B"
+llm_provider = "gemini"
+llm_model = "gemini-3.5-flash-lite"
+llm_min_interval_s = 4.5     # free tier: stays under the per-minute limit
+
+[tracking]
+mlflow = false               # registry.jsonl is always written; set true to mirror runs into MLflow
+experiment = "translation_step"
