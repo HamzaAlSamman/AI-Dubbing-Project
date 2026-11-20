@@ -175,6 +175,33 @@ class SegmentedQETests(unittest.TestCase):
         self.assertEqual(q.name, 'len+seg6')
 
 
+class JudgeTests(unittest.TestCase):
+    def test_pairwise_unblinds_order_and_resumes(self):
+        from dubbing_translation.judge import pairwise
+
+        class AlwaysA:
+            provider, model, calls = 'fake', 'judge', 0
+            def chat_json(self, system, user):
+                self.calls += 1
+                return {'A': {'adequacy': 90, 'fluency': 90}, 'B': {'adequacy': 50, 'fluency': 50}, 'better': 'A'}
+
+        tasks = [{'unit_id': f'u{i}', 'source_text': 'x'} for i in range(10)]
+        a = {t['unit_id']: 'نص أ' for t in tasks}
+        b = {t['unit_id']: 'نص ب' for t in tasks}
+        b['u0'] = 'نص أ'                                   # identical -> no call
+        with tempfile.TemporaryDirectory() as tmp:
+            j = AlwaysA()
+            s = pairwise(tasks, a, b, j, Path(tmp) / 'j.jsonl', log=lambda *_: None)
+            self.assertEqual(j.calls, 9)
+            self.assertEqual(s['identical'], 1)
+            self.assertEqual(s['a_wins'] + s['b_wins'], 9)      # position "A" always wins -> both systems win some
+            self.assertGreater(s['a_wins'], 0)
+            self.assertGreater(s['b_wins'], 0)
+            s2 = pairwise(tasks, a, b, j, Path(tmp) / 'j.jsonl', log=lambda *_: None)
+            self.assertEqual(j.calls, 9)                         # resumed from cache
+            self.assertEqual(s, s2)
+
+
 class ParsingTests(unittest.TestCase):
     def test_parse_json_object(self):
         self.assertEqual(parse_json_object('```json\n{"fit": "أ"}\n```'), {'fit': 'أ'})
