@@ -184,6 +184,74 @@ class HyMT:
         torch.cuda.empty_cache()
 
 
+class HFChatMT:
+    """Any chat-template MT model from the Hugging Face Hub (Hy-MT2, TranslateGemma-style prompts...).
+
+    Produces the greedy translation plus `samples` sampled variants (model-card sampling settings),
+    which gives the selector more candidates of different length at no extra API cost."""
+
+    uses_budget = False
+    TEMPLATES = {
+        # Hy-MT2 model card (English instruction, full target-language name)
+        'hy_mt2': ('Translate the following text into Arabic. Note that you should only output the translated '
+                   'result without any additional explanation:\n\n{src}'),
+    }
+
+    def __init__(self, model_id, template='hy_mt2', *, samples=1, load_in_4bit=True, seed=0,
+                 sampling=None):
+        self.model_id, self.template, self.samples = model_id, template, samples
+        self.load_in_4bit, self.seed = load_in_4bit, seed
+        self.sampling = sampling or {'temperature': 0.7, 'top_p': 0.6, 'top_k': 20, 'repetition_penalty': 1.05}
+        self.name = f'{model_id.replace("/", "_")}__{template}_g1s{samples}'
+        self._tok = self._model = None
+
+    def _load(self):
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+        kw = {'device_map': 'auto', 'low_cpu_mem_usage': True}
+        if self.load_in_4bit:
+            kw['quantization_config'] = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type='nf4',
+                                                           bnb_4bit_compute_dtype=torch.float16)
+        else:
+            kw['torch_dtype'] = torch.float16
+        self._tok = AutoTokenizer.from_pretrained(self.model_id)
+        self._model = AutoModelForCausalLM.from_pretrained(self.model_id, **kw).eval()
+
+    def _run(self, enc, **gen):
+        import torch
+        with torch.inference_mode():
+            out = self._model.generate(input_ids=enc['input_ids'].to(self._model.device),
+                                       attention_mask=enc['attention_mask'].to(self._model.device),
+                                       max_new_tokens=768,
+                                       pad_token_id=self._tok.pad_token_id or self._tok.eos_token_id, **gen)
+        return self._tok.decode(out[0][enc['input_ids'].shape[-1]:], skip_special_tokens=True).strip()
+
+    def generate(self, task, budget):
+        import torch
+        if self._model is None:
+            self._load()
+        prompt = self.TEMPLATES[self.template].format(src=task['source_text'])
+        enc = self._tok.apply_chat_template([{'role': 'user', 'content': prompt}], add_generation_prompt=True,
+                                            return_tensors='pt', return_dict=True)
+        items = []
+        greedy = self._run(enc, do_sample=False, repetition_penalty=self.sampling.get('repetition_penalty', 1.0))
+        if greedy:
+            items.append({'text': greedy, 'variant': 'greedy'})
+        for i in range(self.samples):
+            torch.manual_seed(self.seed + i + sum(map(ord, task['unit_id'])))
+            text = self._run(enc, do_sample=True, **self.sampling)
+            if text and text not in {it['text'] for it in items}:
+                items.append({'text': text, 'variant': f'sample{i}'})
+        return items
+
+    def close(self):
+        import gc
+        import torch
+        self._model = self._tok = None
+        gc.collect()
+        torch.cuda.empty_cache()
+
+
 class Replay:
     """Reuse outputs saved by an earlier run or experiment (one JSON per unit with 'natural_ar').
 

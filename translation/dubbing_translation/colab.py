@@ -16,10 +16,12 @@ from .common import sha256_text
 from .io import load_config, load_tasks, load_windows
 
 
-def _seed_from_csv(units_csv, tasks, cache_path, metric_name):
-    """Reuse MetricX scores already computed by the 17.4 evaluation (same model, same input format)."""
+def _seed_from_csv(units_csv, tasks, cache_path, metric_name, min_words=0):
+    """Reuse MetricX scores already computed by the 17.4 evaluation (same model, same input format).
+    Units long enough to be scored sentence by sentence are not seeded (their score is computed differently)."""
     from .text import clean_translation
-    src = {t['unit_id']: t['source_text'] for t in tasks}
+    src = {t['unit_id']: t['source_text'] for t in tasks
+           if not min_words or len(t['source_text'].split()) < min_words}
     cache_path = Path(cache_path)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     known = set()
@@ -47,10 +49,11 @@ def refine_client(m):
 
 
 def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, use_hymt=False, use_llm=True,
-          refine=True, label='', seed_csv=None, overrides=None):
-    from .generators import HyMT, IsometricLLM, LLMClient, Replay
+          refine=True, label='', seed_csv=None, overrides=None, hf_models=()):
+    """hf_models: [(model_id, template, n_samples)], e.g. [('tencent/Hy-MT2-7B', 'hy_mt2', 1)]."""
+    from .generators import HFChatMT, HyMT, IsometricLLM, LLMClient, Replay
     from .pipeline import run
-    from .scoring import CachedQE, Hunspell, MetricXQE
+    from .scoring import CachedQE, Hunspell, MetricXQE, SegmentedQE
 
     run_dir = Path(run_dir)
     work = run_dir / work_subdir
@@ -66,6 +69,8 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             gens = [Replay(folder, f'replay_{name}') for name, folder in (replay or {}).items()]
             if use_hymt:
                 gens.append(HyMT(m['mt']))
+            for model_id, template, samples in hf_models:
+                gens.append(HFChatMT(model_id, template, samples=samples))
             if use_llm:
                 gens.append(IsometricLLM(LLMClient(m['llm_provider'], m['llm_model'],
                                                    min_interval_s=m['llm_min_interval_s'],
@@ -74,10 +79,12 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             if not refine:
                 cfg['refine']['enabled'] = False
             metric = MetricXQE(m['qe'])
+            seg_words = cfg['gate'].get('qe_segment_min_words', 0)
+            scorer = SegmentedQE(metric, seg_words) if seg_words else metric
             cache = work / 'cache' / 'qe_metricx24.jsonl'
             if seed_csv:
-                log(f'[qe] seeded {_seed_from_csv(seed_csv, tasks, cache, metric.name)} saved scores')
-            qe = CachedQE(metric, cache)
+                log(f'[qe] seeded {_seed_from_csv(seed_csv, tasks, cache, scorer.name, seg_words)} saved scores')
+            qe = CachedQE(scorer, cache)
             repo = Path(__file__).resolve().parents[2]
             run_path, final, metrics = run(tasks, windows, cfg, work, generators=gens, qe=qe, speller=Hunspell(),
                                            refine_client=client, repo_dir=repo, run_label=label, log=log)

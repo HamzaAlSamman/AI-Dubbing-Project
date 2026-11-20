@@ -5,6 +5,7 @@ Every scorer exposes the same tiny interface so tests can inject fakes:
   Spell check : .name, .misspelled(list[str]) -> set[str]
 """
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -39,6 +40,52 @@ class CachedQE:
                     self.cache[k] = float(sc)
                     f.write(json.dumps({'key': k, 'score': float(sc)}) + '\n')
         return [self.cache[self._key(s, h)] for s, h in pairs]
+
+
+_EN_SENT = re.compile(r'(?<=[.!?])\s+(?=[A-Z0-9])')
+_AR_SENT = re.compile(r'(?<=[.!?؟])\s+')
+
+
+class SegmentedQE:
+    """Sentence-level scoring for long units.
+
+    Segment-level QE models are trained on sentence-sized inputs; a 30-second paragraph gets a
+    poor score even when every sentence is translated well. When the source has >= min_words
+    words and source and translation split into the SAME number of sentences, each sentence pair
+    is scored and the result is the source-length-weighted mean; otherwise the whole unit is scored."""
+
+    def __init__(self, base, min_words=60):
+        self.base, self.min_words = base, min_words
+        self.name = f'{base.name}+seg{min_words}'
+        self.segmented = 0
+
+    def _split(self, src, hyp):
+        if len(src.split()) < self.min_words:
+            return None
+        s = [x.strip() for x in _EN_SENT.split(src) if x.strip()]
+        h = [x.strip() for x in _AR_SENT.split(hyp) if x.strip()]
+        return list(zip(s, h)) if len(s) == len(h) > 1 else None
+
+    def score(self, pairs):
+        plan, flat = [], []
+        for src, hyp in pairs:
+            parts = self._split(src, hyp)
+            if parts:
+                plan.append((len(flat), len(parts), [len(p[0].split()) for p in parts]))
+                flat += parts
+            else:
+                plan.append((len(flat), 1, None))
+                flat.append((src, hyp))
+        scores = self.base.score(flat) if flat else []
+        out = []
+        for start, n, weights in plan:
+            chunk = scores[start:start + n]
+            if weights:
+                self.segmented += 1
+                out.append(sum(c * w for c, w in zip(chunk, weights)) / sum(weights))
+            else:
+                out.append(chunk[0])
+        return out
 
 
 class MetricXQE:

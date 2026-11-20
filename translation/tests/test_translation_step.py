@@ -155,6 +155,26 @@ class GateTests(unittest.TestCase):
         self.assertNotIn('كلمةغريبة', allow)
 
 
+class SegmentedQETests(unittest.TestCase):
+    def test_long_units_scored_per_sentence_when_counts_match(self):
+        from dubbing_translation.scoring import SegmentedQE
+
+        class LenQE:
+            name = 'len'
+            def score(self, pairs):
+                return [float(len(s.split())) for s, _ in pairs]
+
+        q = SegmentedQE(LenQE(), min_words=6)
+        src = 'One two three four. Five six seven eight nine.'
+        two = 'جملة أولى. جملة ثانية.'
+        one = 'جملة واحدة فقط'
+        # per sentence: scores 4 and 5 weighted by 4 and 5 words -> 41/9
+        self.assertAlmostEqual(q.score([(src, two)])[0], 41 / 9)
+        self.assertEqual(q.score([(src, one)])[0], 9.0)                 # counts differ -> whole unit
+        self.assertEqual(q.score([('short one.', two)])[0], 2.0)       # below min_words -> whole unit
+        self.assertEqual(q.name, 'len+seg6')
+
+
 class ParsingTests(unittest.TestCase):
     def test_parse_json_object(self):
         self.assertEqual(parse_json_object('```json\n{"fit": "أ"}\n```'), {'fit': 'أ'})

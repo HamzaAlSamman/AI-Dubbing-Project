@@ -24,6 +24,7 @@ min_ratio = 0.60             # predicted / slot below this = too short (long sil
 max_speedup = 1.25           # bounded speed-up allowed by the audio stage
 tiny_slot_s = 2.0            # slots shorter than this get a merge hint when they overrun
 spelling_allowlist = []      # extra accepted technical words (consensus words are added automatically)
+qe_segment_min_words = 60    # units with >= this many source words are QE-scored sentence by sentence (0 = off)
 
 [refine]
 enabled = true

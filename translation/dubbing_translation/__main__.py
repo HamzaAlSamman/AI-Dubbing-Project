@@ -32,7 +32,10 @@ def build_and_run(args, log=print):
     client = None if args.no_refine else refine_client(m)
     if args.no_refine:
         cfg['refine']['enabled'] = False
-    qe = CachedQE(MetricXQE(m['qe']), Path(args.work_dir) / 'cache' / 'qe_metricx24.jsonl')
+    from .scoring import SegmentedQE
+    seg = cfg['gate'].get('qe_segment_min_words', 0)
+    metric = MetricXQE(m['qe'])
+    qe = CachedQE(SegmentedQE(metric, seg) if seg else metric, Path(args.work_dir) / 'cache' / 'qe_metricx24.jsonl')
     repo = Path(__file__).resolve().parents[2]
     return run(tasks, windows, cfg, args.work_dir, generators=gens, qe=qe, speller=Hunspell(),
                refine_client=client, repo_dir=repo, run_label=args.label, log=log)
