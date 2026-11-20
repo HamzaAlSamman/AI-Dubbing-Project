@@ -4,6 +4,11 @@
 المخرج: `translation_final.json`، وفيه لكل وحدة النص العربي المكتوب، والنص الذي يُقرأ بصوت TTS،
 والمدة المتوقعة، وحالة القبول، وسبب أي رفض.
 
+**التوثيق:**
+- [المنهجية والتجارب والنتائج](docs/METHODOLOGY.md)
+- [الدراسات المعتمدة](docs/REFERENCES.md) · [BibTeX](docs/references.bib)
+- [سكربت Colab لإعادة الإنتاج](colab/run_translation_step.py)
+
 ## الفكرة باختصار
 
 لكل وحدة:
