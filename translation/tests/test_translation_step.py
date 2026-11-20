@@ -202,6 +202,26 @@ class JudgeTests(unittest.TestCase):
             self.assertEqual(s, s2)
 
 
+class EvaluationTests(unittest.TestCase):
+    def test_automatic_metrics_and_registry(self):
+        from dubbing_translation.evaluate import Evaluation
+        tasks = [{'unit_id': f'u{i}', 'source_text': 'we take the values and use them now'} for i in range(4)]
+        windows = {t['unit_id']: Window(t['unit_id'], 3.0, 3.0) for t in tasks}
+        good, long_ = arabic_of(int(3.0 * RATE)), arabic_of(int(3.0 * RATE * 1.6))
+        systems = {'sysA': {t['unit_id']: good for t in tasks},
+                   'sysB': {'u0': long_, 'u1': good}}
+        with tempfile.TemporaryDirectory() as tmp:
+            ev = Evaluation(tmp, tasks, CFG, label='t')
+            s = ev.run_automatic(windows, systems, FakeQE(default=2.0), FakeSpeller())
+            self.assertEqual(s['sysA']['gate_accept_pct'], 100.0)
+            self.assertEqual(s['sysB']['coverage_pct'], 50.0)
+            self.assertEqual(s['sysB']['gate_accept_pct'], 25.0)
+            self.assertEqual(s['sysB']['too_long_pct'], 25.0)
+            reg = (Path(tmp) / 'evaluations' / 'registry.jsonl').read_text(encoding='utf-8').splitlines()
+            self.assertEqual(len(reg), 2)
+            self.assertEqual(json.loads(reg[0])['kind'], 'automatic')
+
+
 class ParsingTests(unittest.TestCase):
     def test_parse_json_object(self):
         self.assertEqual(parse_json_object('```json\n{"fit": "أ"}\n```'), {'fit': 'أ'})
