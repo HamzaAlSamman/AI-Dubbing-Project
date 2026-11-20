@@ -39,6 +39,13 @@ def _seed_from_csv(units_csv, tasks, cache_path, metric_name):
     return added
 
 
+def refine_client(m):
+    from .generators import LLMClient
+    return LLMClient(m.get('refine_provider', m['llm_provider']), m.get('refine_model', m['llm_model']),
+                     min_interval_s=m.get('refine_min_interval_s', m['llm_min_interval_s']),
+                     timeout_s=m.get('llm_timeout_s', 180), thinking_budget=m.get('refine_thinking_budget'))
+
+
 def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, use_hymt=False, use_llm=True,
           refine=True, label='', seed_csv=None, overrides=None):
     from .generators import HyMT, IsometricLLM, LLMClient, Replay
@@ -59,11 +66,11 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             gens = [Replay(folder, f'replay_{name}') for name, folder in (replay or {}).items()]
             if use_hymt:
                 gens.append(HyMT(m['mt']))
-            client = None
-            if use_llm or refine:
-                client = LLMClient(m['llm_provider'], m['llm_model'], min_interval_s=m['llm_min_interval_s'])
             if use_llm:
-                gens.append(IsometricLLM(client))
+                gens.append(IsometricLLM(LLMClient(m['llm_provider'], m['llm_model'],
+                                                   min_interval_s=m['llm_min_interval_s'],
+                                                   timeout_s=m.get('llm_timeout_s', 180))))
+            client = refine_client(m) if refine else None
             if not refine:
                 cfg['refine']['enabled'] = False
             metric = MetricXQE(m['qe'])

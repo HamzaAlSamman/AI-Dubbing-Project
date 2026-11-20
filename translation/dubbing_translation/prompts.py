@@ -21,15 +21,19 @@ ISOMETRIC_SYSTEM = (
     'Return only JSON: {"fit": "...", "short": "..."}'
 )
 
-REFINE_VERSION = 'refine_v1'
+REFINE_VERSION = 'refine_v2'
 REFINE_SYSTEM = (
     "You are the final editor of an Arabic voice-over script for an educational video. You receive the English "
     "source of one unit, the best Arabic drafts with the problems an automatic checker found, and a target length "
-    "range in Arabic letters (spaces, punctuation and diacritics not counted).\n"
+    "range in Arabic letters (spaces, punctuation and diacritics not counted). The drafts are ordered from the best "
+    "automatic quality estimate to the worst: stay close to the meaning and terminology of the first draft and fix "
+    "only the listed problems.\n"
     "Write ONE corrected Modern Standard Arabic translation that:\n"
-    "- conveys every fact, number, negation and technical term of the English, adds nothing;\n"
+    "- conveys every fact, number, negation and technical term of the English, adds nothing, drops nothing "
+    "(spoken fillers such as 'you know' may go);\n"
     "- falls inside the target letter range;\n"
-    "- writes variables and code as plain Latin text without quotes or backticks, numbers as digits;\n"
+    "- writes variables and code as plain Latin text without quotes or backticks (y stays y, never ياء), numbers "
+    "as digits; spoken math like 'x comma y' or 'one by m' is written as (x, y) or 1 × m;\n"
     "- uses correct standard spelling and natural spoken grammar;\n"
     "- does not open with a discourse word unless the English does.\n"
     "Never use the straight double-quote character. "

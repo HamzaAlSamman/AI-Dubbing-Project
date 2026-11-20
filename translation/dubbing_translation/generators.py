@@ -46,30 +46,37 @@ class LLMClient:
 
     Paced below per-minute limits; transient errors are retried; a daily quota raises QuotaExhausted."""
 
-    def __init__(self, provider, model, *, min_interval_s=4.5, temperature=0.0, max_attempts=5):
+    def __init__(self, provider, model, *, min_interval_s=4.5, temperature=0.0, max_attempts=5,
+                 timeout_s=180, thinking_budget=None):
         if provider not in ('gemini', 'openrouter'):
             raise ValueError(provider)
         if provider == 'openrouter' and not model.endswith(':free'):
             raise ValueError(f'refusing paid OpenRouter model {model!r}; only :free models are allowed')
         self.provider, self.model = provider, model
         self.min_interval_s, self.temperature, self.max_attempts = min_interval_s, temperature, max_attempts
+        self.timeout_s, self.thinking_budget = timeout_s, thinking_budget
         self._client, self._last = None, 0.0
         self.calls = 0
 
     def _gemini(self):
         if self._client is None:
             from google import genai
+            from google.genai import types
             key = os.environ.get('GEMINI_API_KEY')
             if not key:
                 raise RuntimeError('GEMINI_API_KEY is not loaded (run the secrets cell yourself)')
-            self._client = genai.Client(api_key=key)
+            # explicit timeout: without it a stalled request can block the run indefinitely
+            self._client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=int(self.timeout_s * 1000)))
         return self._client
 
     def _once(self, system, user):
         if self.provider == 'gemini':
             from google.genai import types
+            extra = {}
+            if self.thinking_budget is not None:
+                extra['thinking_config'] = types.ThinkingConfig(thinking_budget=self.thinking_budget)
             conf = types.GenerateContentConfig(system_instruction=system, temperature=self.temperature,
-                                               response_mime_type='application/json')
+                                               response_mime_type='application/json', **extra)
             return self._gemini().models.generate_content(model=self.model, contents=user, config=conf).text or ''
         import requests
         key = os.environ.get('OPENROUTER_API_KEY')
@@ -100,8 +107,8 @@ class LLMClient:
                 text = str(exc)
                 if 'PerDay' in text or 'per day' in text.lower():
                     raise QuotaExhausted(text[:200]) from exc
-                if any(s in text for s in ('429', 'RESOURCE_EXHAUSTED', '500', 'INTERNAL', '502', '503',
-                                           'UNAVAILABLE', 'timed out', 'Timeout')):
+                if any(s in text for s in ('429', 'RESOURCE_EXHAUSTED', '500', 'INTERNAL', '502', '503', '504',
+                                           'UNAVAILABLE', 'DEADLINE_EXCEEDED', 'timed out', 'Timeout')):
                     time.sleep(45)
                     continue
                 raise

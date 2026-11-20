@@ -37,6 +37,13 @@ mt = "tencent/HY-MT1.5-7B"
 llm_provider = "gemini"
 llm_model = "gemini-3.5-flash-lite"
 llm_min_interval_s = 4.5     # free tier: stays under the per-minute limit
+# Refiner: a stronger model, used only for the few units no candidate passes (2026-11-20 run:
+# the lite model fixed 1 of 7 such units).
+refine_provider = "gemini"
+refine_model = "gemini-3.5-flash"
+refine_min_interval_s = 6.0
+refine_thinking_budget = 1024
+llm_timeout_s = 180
 
 [tracking]
 mlflow = false               # registry.jsonl is always written; set true to mirror runs into MLflow

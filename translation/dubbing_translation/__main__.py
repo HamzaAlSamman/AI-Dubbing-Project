@@ -25,10 +25,11 @@ def build_and_run(args, log=print):
     gens = [Replay(folder, name) for name, folder in (r.split('=', 1) for r in args.replay)]
     if not args.no_hymt:
         gens.append(HyMT(m['mt']))
-    client = None
     if not args.no_llm:
-        client = LLMClient(m['llm_provider'], m['llm_model'], min_interval_s=m['llm_min_interval_s'])
-        gens.append(IsometricLLM(client))
+        gens.append(IsometricLLM(LLMClient(m['llm_provider'], m['llm_model'], min_interval_s=m['llm_min_interval_s'],
+                                           timeout_s=m.get('llm_timeout_s', 180))))
+    from .colab import refine_client
+    client = None if args.no_refine else refine_client(m)
     if args.no_refine:
         cfg['refine']['enabled'] = False
     qe = CachedQE(MetricXQE(m['qe']), Path(args.work_dir) / 'cache' / 'qe_metricx24.jsonl')
