@@ -269,6 +269,16 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                 continue
             chosen = min(valid, key=lambda c: (len(c['eval']['reasons']), rank_key(c['eval'])))
             status = 'needs_review'
+            # still hand the reviewer the best draft: blind LLM ranking among valid, non-overlong drafts
+            fit = [c for c in valid if not any(r.startswith('invalid') or r == 'duration_too_long'
+                                               for r in c['eval']['reasons'])]
+            if use_rank and len(fit) >= 2:
+                try:
+                    ranked, _ = rank_unit(t, fit, cfg, rank_client, work_dir)
+                    chosen = ranked or chosen
+                except QuotaExhausted as exc:
+                    stopped['rank'] = str(exc)[:200]
+                    use_rank = False
         ev = chosen['eval']
         flags = []
         if w.slot_s < cfg['gate']['tiny_slot_s'] and ev['zone'] in ('too_long', 'speedup'):
