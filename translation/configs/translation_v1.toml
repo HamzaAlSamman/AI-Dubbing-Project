@@ -32,6 +32,16 @@ max_attempts = 3
 drafts_shown = 2
 max_qe_worse = 0.5           # duration-only edits may not lose more than this much QE
 
+[rank]
+# Second-stage choice among the accepted candidates: MetricX shortlists (top_k by QE), an LLM scores
+# adequacy and fluency blind (sense errors, agreement, dropped phrases that MetricX misses).
+# 2026-11-20 independent judge (nemotron-3-ultra) found such errors in MetricX-only picks.
+enabled = true
+top_k = 4
+adequacy_weight = 2.0        # score = 2 x adequacy + fluency
+provider = "gemini"
+model = "gemini-3.5-flash-lite"
+
 [models]
 qe = "google/metricx-24-hybrid-large-v2p6"
 mt = "tencent/HY-MT1.5-7B"

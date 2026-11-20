@@ -19,7 +19,7 @@ from . import __version__
 from .common import git_commit, now_iso, now_stamp, read_json, sha256_json, write_json_once
 from .gate import evaluate, only_duration_failed, rank_key
 from .generators import QuotaExhausted
-from .prompts import REFINE_SYSTEM, REFINE_VERSION, describe_issues
+from .prompts import RANK_SYSTEM, RANK_VERSION, REFINE_SYSTEM, REFINE_VERSION, describe_issues
 from .text import ar_tokens, clean_translation, tts_text
 from .timing import letter_budget
 
@@ -168,9 +168,47 @@ def refine_unit(task, window, cands, cfg, client, qe, misspelled_fn, allow, work
             'raw_text': a['text'], 'also_from': [], 'eval': a['eval'], 'refined_from': best['cand_id']}, rec['attempts']
 
 
+# ------------------------------------------------------------------ 3b. LLM re-ranking of accepted candidates
+def rank_unit(task, cands, cfg, client, work_dir):
+    """Blind GEMBA-style scoring of the top accepted candidates; returns the chosen candidate.
+
+    MetricX shortlists (gate + top_k by QE); the LLM judges sense errors MetricX misses (wrong word
+    sense, agreement, dropped phrases). Candidate sources are hidden and the order is shuffled."""
+    import random
+    rcfg = cfg['rank']
+    pool = sorted(cands, key=lambda c: rank_key(c['eval']))[:rcfg['top_k']]
+    if len(pool) < 2:
+        return pool[0] if pool else None, None
+    rng = random.Random(sha256_json([task['unit_id'], [c['text'] for c in pool]]))
+    shown = pool[:]
+    rng.shuffle(shown)
+    payload = {'english': task['source_text'],
+               'candidates': [{'id': i + 1, 'arabic': c['text']} for i, c in enumerate(shown)]}
+    name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{RANK_VERSION}'
+    path = Path(work_dir) / 'cache' / 'rank' / name / f'{task["unit_id"]}__{sha256_json(payload)[:10]}.json'
+    if path.exists():
+        rec = read_json(path)
+    else:
+        reply = client.chat_json(RANK_SYSTEM, json.dumps(payload, ensure_ascii=False)) or {}
+        rec = {'unit_id': task['unit_id'], 'ranker': name, 'payload': payload, 'reply': reply, 'created_at': now_iso()}
+        write_json_once(path, rec)
+    scores = {}
+    for s in (rec['reply'] or {}).get('scores') or []:
+        try:
+            scores[int(s['id'])] = float(s['adequacy']) * rcfg['adequacy_weight'] + float(s['fluency'])
+        except (KeyError, TypeError, ValueError):
+            continue
+    if len(scores) < len(shown):
+        return pool[0], rec                          # unusable reply: keep the MetricX choice
+    best_i = max(range(len(shown)), key=lambda i: (scores[i + 1], -rank_key(shown[i]['eval'])[0]))
+    chosen = shown[best_i]
+    chosen['rank_scores'] = {shown[i]['cand_id']: scores[i + 1] for i in range(len(shown))}
+    return chosen, rec
+
+
 # ------------------------------------------------------------------ 4. run
-def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client=None, repo_dir=None,
-        run_label='', log=print):
+def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client=None, rank_client=None,
+        repo_dir=None, run_label='', log=print):
     work_dir = Path(work_dir)
     cfg_hash = sha256_json(cfg)
     run_id = f'tr_{now_stamp()}_{cfg_hash[:8]}' + (f'_{run_label}' if run_label else '')
@@ -181,6 +219,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                 'tasks_sha256': tasks_hash, 'units': len(tasks), 'generators': [g.name for g in generators],
                 'qe_metric': qe.name, 'spell_checker': speller.name,
                 'refiner': None if refine_client is None else f'{refine_client.provider}:{refine_client.model}',
+                'ranker': None if rank_client is None else f'{rank_client.provider}:{rank_client.model}',
                 'windows': {u: w.as_dict() for u, w in windows.items()}, 'human_review': 'none'}
     write_json_once(run_dir / 'manifest.json', manifest)
 
@@ -196,12 +235,22 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
             cache_words[w] = None
         return set(misspelled) | found
 
-    final, refine_log = [], {}
+    final, refine_log, rank_changed = [], {}, 0
+    use_rank = rank_client is not None and cfg.get('rank', {}).get('enabled')
     for t in tasks:
         u, w = t['unit_id'], windows[t['unit_id']]
         cs = cands[u]
         accepted = sorted((c for c in cs if c['eval']['accepted']), key=lambda c: rank_key(c['eval']))
         status, chosen = 'accepted', (accepted[0] if accepted else None)
+        if use_rank and len(accepted) >= 2:
+            try:
+                ranked, _ = rank_unit(t, accepted, cfg, rank_client, work_dir)
+            except QuotaExhausted as exc:
+                stopped['rank'] = str(exc)[:200]
+                use_rank, ranked = False, None
+            if ranked is not None:
+                rank_changed += ranked is not chosen
+                chosen = ranked
         if chosen is None and refine_client is not None and cfg['refine']['enabled'] and cs:
             try:
                 chosen, refine_log[u] = refine_unit(t, w, cs, cfg, refine_client, qe, misspelled_fn, allow,
@@ -232,9 +281,12 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                       'qe': ev['qe'], 'spelling_rate': ev['spelling_rate'], 'letters': ev['letters'],
                       'predicted_s': ev['predicted_s'], 'slot_s': w.slot_s, 'window_s': w.window_s,
                       'ratio_slot': ev['ratio_slot'], 'ratio_window': ev['ratio_window'], 'zone': ev['zone'],
-                      'reasons': ev['reasons'], 'flags': flags, 'n_candidates': len(cs)})
+                      'reasons': ev['reasons'], 'flags': flags, 'n_candidates': len(cs),
+                      'rank_scores': chosen.get('rank_scores')})
 
     metrics = summarize(final, cands, stopped, refine_client, allow)
+    metrics['rank_changed_choice'] = rank_changed
+    metrics['llm_calls_rank'] = getattr(rank_client, 'calls', 0) if rank_client else 0
     _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log)
     _append_registry(work_dir / 'registry.jsonl', manifest, metrics)
     if cfg.get('tracking', {}).get('mlflow'):

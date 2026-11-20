@@ -262,6 +262,30 @@ class PipelineTests(unittest.TestCase):
         log = json.loads(next((self.work / 'runs').glob('*/refine_log.json')).read_text(encoding='utf-8'))
         self.assertEqual(log['u0'][0]['verdict'], 'meaning_guard')
 
+    def test_llm_ranker_overrides_metricx_choice_among_accepted(self):
+        g1 = FixedGen('mt', {'u0': self.good})
+        alt = self.good + ' و'
+        g2 = FixedGen('llm', {'u0': alt})
+        qe = FakeQE({self.good: 1.0, alt: 2.0})                    # MetricX prefers g1
+
+        class PreferAlt:
+            provider, model, calls = 'fake', 'ranker', 0
+            def chat_json(self, system, user):
+                self.calls += 1
+                cands = json.loads(user)['candidates']
+                return {'scores': [{'id': c['id'], 'adequacy': 99 if c['arabic'] == alt else 60, 'fluency': 90}
+                                   for c in cands]}
+
+        r = PreferAlt()
+        _, final, metrics = run(self.tasks[:1], self.windows, CFG, self.work, generators=[g1, g2], qe=qe,
+                                speller=FakeSpeller(), rank_client=r, log=lambda *_: None)
+        self.assertEqual(final[0]['natural_ar'], alt)
+        self.assertEqual(metrics['rank_changed_choice'], 1)
+        # cached: a second run makes no new ranker call
+        run(self.tasks[:1], self.windows, CFG, self.work, generators=[g1, g2], qe=qe, speller=FakeSpeller(),
+            rank_client=r, log=lambda *_: None, run_label='again')
+        self.assertEqual(r.calls, 1)
+
     def test_unfixable_unit_is_flagged_for_review(self):
         g = FixedGen('mt', {'u0': self.long})
         _, final, metrics = run(self.tasks[:1], self.windows, CFG, self.work, generators=[g], qe=FakeQE(),

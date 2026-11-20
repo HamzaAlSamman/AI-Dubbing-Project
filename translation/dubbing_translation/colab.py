@@ -49,7 +49,7 @@ def refine_client(m):
 
 
 def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, use_hymt=False, use_llm=True,
-          refine=True, label='', seed_csv=None, overrides=None, hf_models=()):
+          refine=True, label='', seed_csv=None, overrides=None, hf_models=(), rank=True):
     """hf_models: [(model_id, template, n_samples)], e.g. [('tencent/Hy-MT2-7B', 'hy_mt2', 1)]."""
     from .generators import HFChatMT, HyMT, IsometricLLM, LLMClient, Replay
     from .pipeline import run
@@ -86,8 +86,14 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
                 log(f'[qe] seeded {_seed_from_csv(seed_csv, tasks, cache, scorer.name, seg_words)} saved scores')
             qe = CachedQE(scorer, cache)
             repo = Path(__file__).resolve().parents[2]
+            ranker = None
+            if rank and cfg.get('rank', {}).get('enabled'):
+                rc = cfg['rank']
+                ranker = LLMClient(rc['provider'], rc['model'], min_interval_s=m['llm_min_interval_s'],
+                                   timeout_s=m.get('llm_timeout_s', 180))
             run_path, final, metrics = run(tasks, windows, cfg, work, generators=gens, qe=qe, speller=Hunspell(),
-                                           refine_client=client, repo_dir=repo, run_label=label, log=log)
+                                           refine_client=client, rank_client=ranker, repo_dir=repo, run_label=label,
+                                           log=log)
             metric.close()
             job['result'] = {'run_dir': str(run_path), 'metrics': metrics}
         except Exception as exc:                     # noqa: BLE001 - reported to the notebook

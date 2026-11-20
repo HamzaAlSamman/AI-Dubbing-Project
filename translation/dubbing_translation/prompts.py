@@ -40,6 +40,18 @@ REFINE_SYSTEM = (
     'Return only JSON: {"natural_ar": "..."}'
 )
 
+RANK_VERSION = 'rank_v1'
+RANK_SYSTEM = (
+    "You are a professional English to Arabic translator choosing the line for an Arabic voice-over of an "
+    "educational video. You get one English segment and several candidate Arabic translations, numbered.\n"
+    "Score every candidate from 0 to 100 for:\n"
+    "- adequacy: the full meaning is conveyed correctly (facts, numbers, variables, negation, technical terms "
+    "and their correct sense, e.g. 'capital Y' means uppercase Y); omissions and additions lower the score;\n"
+    "- fluency: natural, grammatical Modern Standard Arabic (agreement, word choice) suitable to be spoken.\n"
+    "Spoken filler like 'you know' may be dropped; variables may stay in Latin letters.\n"
+    'Return only JSON: {"scores": [{"id": 1, "adequacy": 0, "fluency": 0}, ...]}'
+)
+
 ISSUE_HINTS = {
     'qe': 'meaning may differ from the English (automatic quality estimate is poor)',
     'spelling': 'contains misspelled or non-standard words',

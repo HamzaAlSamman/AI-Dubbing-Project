@@ -37,8 +37,12 @@ def build_and_run(args, log=print):
     metric = MetricXQE(m['qe'])
     qe = CachedQE(SegmentedQE(metric, seg) if seg else metric, Path(args.work_dir) / 'cache' / 'qe_metricx24.jsonl')
     repo = Path(__file__).resolve().parents[2]
+    ranker = None
+    if cfg.get('rank', {}).get('enabled'):
+        ranker = LLMClient(cfg['rank']['provider'], cfg['rank']['model'], min_interval_s=m['llm_min_interval_s'],
+                           timeout_s=m.get('llm_timeout_s', 180))
     return run(tasks, windows, cfg, args.work_dir, generators=gens, qe=qe, speller=Hunspell(),
-               refine_client=client, repo_dir=repo, run_label=args.label, log=log)
+               refine_client=client, rank_client=ranker, repo_dir=repo, run_label=args.label, log=log)
 
 
 def show_runs(work_dir):
