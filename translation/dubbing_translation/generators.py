@@ -184,6 +184,17 @@ class HyMT:
         torch.cuda.empty_cache()
 
 
+_THINK = re.compile(r'<think>.*?</think>', re.S)
+
+
+def strip_reasoning(text):
+    """Drop the reasoning block of reasoning-capable chat models; an unclosed block yields ''."""
+    t = _THINK.sub('', text or '')
+    if '<think>' in t:
+        t = t.split('<think>')[0]
+    return t.replace('</think>', '').strip()
+
+
 class HFChatMT:
     """Any chat-template MT model from the Hugging Face Hub (Hy-MT2, TranslateGemma-style prompts...).
 
@@ -195,11 +206,17 @@ class HFChatMT:
         # Hy-MT2 model card (English instruction, full target-language name)
         'hy_mt2': ('Translate the following text into Arabic. Note that you should only output the translated '
                    'result without any additional explanation:\n\n{src}'),
+        # general chat LLMs (Qwen3, Jais-3, ...): plain instruction, MSA explicitly
+        'msa_plain': ('Translate the following English text into Modern Standard Arabic. Output only the '
+                      'Arabic translation, without explanations, notes or transliteration.\n\n{src}'),
     }
 
     def __init__(self, model_id, template='hy_mt2', *, samples=1, load_in_4bit=True, seed=0,
-                 sampling=None):
+                 sampling=None, trust_remote_code=False, template_kwargs=None):
+        """trust_remote_code: models with custom code (Jais-3). template_kwargs: extra arguments of
+        apply_chat_template, e.g. {'enable_thinking': False} for Qwen3 hybrid-reasoning models."""
         self.model_id, self.template, self.samples = model_id, template, samples
+        self.trust_remote_code, self.template_kwargs = trust_remote_code, dict(template_kwargs or {})
         self.load_in_4bit, self.seed = load_in_4bit, seed
         self.sampling = sampling or {'temperature': 0.7, 'top_p': 0.6, 'top_k': 20, 'repetition_penalty': 1.05}
         self.name = f'{model_id.replace("/", "_")}__{template}_g1s{samples}'
@@ -214,8 +231,9 @@ class HFChatMT:
                                                            bnb_4bit_compute_dtype=torch.float16)
         else:
             kw['torch_dtype'] = torch.float16
-        self._tok = AutoTokenizer.from_pretrained(self.model_id)
-        self._model = AutoModelForCausalLM.from_pretrained(self.model_id, **kw).eval()
+        rc = {'trust_remote_code': True} if self.trust_remote_code else {}
+        self._tok = AutoTokenizer.from_pretrained(self.model_id, **rc)
+        self._model = AutoModelForCausalLM.from_pretrained(self.model_id, **kw, **rc).eval()
 
     def _run(self, enc, **gen):
         import torch
@@ -224,7 +242,7 @@ class HFChatMT:
                                        attention_mask=enc['attention_mask'].to(self._model.device),
                                        max_new_tokens=768,
                                        pad_token_id=self._tok.pad_token_id or self._tok.eos_token_id, **gen)
-        return self._tok.decode(out[0][enc['input_ids'].shape[-1]:], skip_special_tokens=True).strip()
+        return strip_reasoning(self._tok.decode(out[0][enc['input_ids'].shape[-1]:], skip_special_tokens=True))
 
     def generate(self, task, budget):
         import torch
@@ -232,7 +250,7 @@ class HFChatMT:
             self._load()
         prompt = self.TEMPLATES[self.template].format(src=task['source_text'])
         enc = self._tok.apply_chat_template([{'role': 'user', 'content': prompt}], add_generation_prompt=True,
-                                            return_tensors='pt', return_dict=True)
+                                            return_tensors='pt', return_dict=True, **self.template_kwargs)
         items = []
         greedy = self._run(enc, do_sample=False, repetition_penalty=self.sampling.get('repetition_penalty', 1.0))
         if greedy:

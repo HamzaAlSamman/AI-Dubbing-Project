@@ -6,6 +6,7 @@
 
 **التوثيق:**
 - [المنهجية والتجارب والنتائج](docs/METHODOLOGY.md)
+- [التقييم: المعايير والنتائج وما تبقى](docs/EVALUATION.md) · [معيار مرجعي على WMT24++](colab/run_benchmark.py)
 - [الدراسات المعتمدة](docs/REFERENCES.md) · [BibTeX](docs/references.bib)
 - [سكربت Colab لإعادة الإنتاج](colab/run_translation_step.py)
 

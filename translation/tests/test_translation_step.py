@@ -222,6 +222,78 @@ class EvaluationTests(unittest.TestCase):
             self.assertEqual(json.loads(reg[0])['kind'], 'automatic')
 
 
+class BenchmarkTests(unittest.TestCase):
+    ROWS = [
+        {'domain': 'speech', 'segment_id': 1, 'document_id': 'd', 'is_bad_source': False,
+         'source': 'one two three four five six seven eight nine ten', 'target': 'لهجة', 'original_target': 'فصحى'},
+        {'domain': 'speech', 'segment_id': 2, 'document_id': 'd', 'is_bad_source': True,
+         'source': 'bad source', 'target': 'x', 'original_target': 'y'},
+        {'domain': 'news', 'segment_id': 3, 'document_id': 'n', 'is_bad_source': False,
+         'source': 'news text', 'target': 'خبر', 'original_target': 'خبر'},
+    ]
+
+    def test_loader_uses_msa_reference_and_filters(self):
+        from dubbing_translation.benchmark import as_tasks, load_wmt24pp
+        items = load_wmt24pp(self.ROWS)
+        self.assertEqual([i['unit_id'] for i in items], ['wmt24pp_1'])
+        self.assertEqual(items[0]['reference'], 'فصحى')                 # original_target, not the dialect post-edit
+        self.assertEqual(len(load_wmt24pp(self.ROWS, domains=None)), 2)
+        self.assertAlmostEqual(as_tasks(items)[0]['slot_s'], round(10 / 2.6, 3))
+
+    def test_scores_lengths_zones_and_registry(self):
+        from dubbing_translation.benchmark import run_reference
+        from dubbing_translation.evaluate import Evaluation
+
+        class FakeRef:
+            name = 'fake-ref'
+
+            def score(self, triples):
+                return [0.0 if h == r else 5.0 for _, h, r in triples]
+
+        slot = 10 / 2.6
+        ref = arabic_of(int(slot * RATE))
+        items = [{'unit_id': 'u1', 'source_text': ' '.join(['w'] * 10), 'reference': ref}]
+        systems = {'same': {'u1': ref}, 'long': {'u1': arabic_of(int(slot * RATE * 1.6))}, 'none': {}}
+        with tempfile.TemporaryDirectory() as tmp:
+            ev = Evaluation(tmp, items, CFG, label='b')
+            s = run_reference(ev, items, systems, rate=RATE, ref_scorer=FakeRef())
+            self.assertEqual(s['same']['lc10_pct'], 100.0)
+            self.assertEqual(s['same']['metricx_ref_mean'], 0.0)
+            self.assertEqual(s['long']['too_long_pct'], 100.0)
+            self.assertEqual(s['long']['lc10_pct'], 0.0)
+            self.assertEqual(s['none']['coverage_pct'], 0.0)
+            self.assertIn('_human_reference', s)
+            reg = [json.loads(x) for x in
+                   (Path(tmp) / 'evaluations' / 'registry.jsonl').read_text(encoding='utf-8').splitlines()]
+            self.assertEqual({r['kind'] for r in reg}, {'reference'})
+            self.assertEqual(len(reg), 3)                                # the human reference row is not registered
+            self.assertTrue((ev.dir / 'reference.json').exists())
+
+
+class BenchmarkGenerationTests(unittest.TestCase):
+    def test_generate_cached_resumes_and_strips_reasoning(self):
+        from dubbing_translation.benchmark import as_tasks, generate_cached
+        from dubbing_translation.generators import strip_reasoning
+        self.assertEqual(strip_reasoning('<think>plan</think>\n ترجمة'), 'ترجمة')
+        self.assertEqual(strip_reasoning('<think>unfinished'), '')
+
+        class Gen:
+            name, calls = 'fake_gen', 0
+
+            def generate(self, task, budget):
+                Gen.calls += 1
+                assert budget['min'] <= budget['max']
+                return [{'text': 'نص ' + task['unit_id'], 'variant': 'plain'}]
+
+        items = [{'unit_id': f'u{i}', 'source_text': 'a b c d e', 'reference': 'ر'} for i in range(3)]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = generate_cached(Gen(), as_tasks(items), tmp, rate=RATE, log=lambda *_: None)
+            again = generate_cached(Gen(), as_tasks(items), tmp, rate=RATE, log=lambda *_: None)
+        self.assertEqual(Gen.calls, 3)                                   # second pass reads the cache only
+        self.assertEqual(out, again)
+        self.assertEqual(out['u1'], 'نص u1')
+
+
 class ParsingTests(unittest.TestCase):
     def test_parse_json_object(self):
         self.assertEqual(parse_json_object('```json\n{"fit": "أ"}\n```'), {'fit': 'أ'})

@@ -69,8 +69,8 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             gens = [Replay(folder, f'replay_{name}') for name, folder in (replay or {}).items()]
             if use_hymt:
                 gens.append(HyMT(m['mt']))
-            for model_id, template, samples in hf_models:
-                gens.append(HFChatMT(model_id, template, samples=samples))
+            for model_id, template, samples, *extra in hf_models:      # optional 4th item: HFChatMT kwargs
+                gens.append(HFChatMT(model_id, template, samples=samples, **(extra[0] if extra else {})))
             if use_llm:
                 gens.append(IsometricLLM(LLMClient(m['llm_provider'], m['llm_model'],
                                                    min_interval_s=m['llm_min_interval_s'],

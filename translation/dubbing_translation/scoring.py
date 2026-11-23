@@ -128,6 +128,19 @@ class MetricXQE:
             self.torch.cuda.empty_cache()
 
 
+class MetricXRef(MetricXQE):
+    """MetricX-24 hybrid WITH a human reference (benchmark sets only). 0 = perfect, 25 = worst.
+
+    Same model as the QE scorer; input format of `metricx24.predict` without --qe.
+    .score(list[(source, hypothesis, reference)])"""
+
+    name = 'metricx-24-hybrid-large-v2p6-ref'
+
+    def score(self, triples, batch_size=8):
+        merged = [(s, h + ' reference: ' + r) for s, h, r in triples]
+        return super().score(merged, batch_size=batch_size)
+
+
 class Hunspell:
     """hunspell + hunspell-ar (Ayaspell). Installs the packages on Debian/Colab if missing."""
 

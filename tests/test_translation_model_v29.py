@@ -65,7 +65,7 @@ class TranslationModelTests(unittest.TestCase):
                       backend_factory=self.fake_backend,execute=True,allow_online=True,
                       free_tier_confirmed=True,max_requests=1)
             self.assertEqual(r['request_count'],1)
-            doc=json.loads(Path(r['results'][0]['path']).read_text())
+            doc=json.loads(Path(r['results'][0]['path']).read_text(encoding='utf-8'))
             self.assertFalse(doc['human_approved'])
             self.assertIsNone(doc['final_dub_ar'])
             self.assertEqual(doc['terminology_candidates'][0]['review_status'],'candidate')
