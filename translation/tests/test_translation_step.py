@@ -222,6 +222,32 @@ class EvaluationTests(unittest.TestCase):
             self.assertEqual(json.loads(reg[0])['kind'], 'automatic')
 
 
+class LectureEvaluationTests(unittest.TestCase):
+    def test_evaluate_lecture_reads_drive_layout(self):
+        from dubbing_translation.colab import evaluate_lecture
+        good = arabic_of(int(3.0 * RATE))
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            tasks = [{'unit_id': f'u{i}', 'source_text': 'we take the values and use them now',
+                      'source_duration_s': 3.0} for i in range(2)]
+            (run / 'experiments_v1' / 'outputs' / 'qwen3_4b').mkdir(parents=True)
+            (run / 'experiments_v1' / 'tasks.json').write_text(json.dumps({'tasks': tasks}), encoding='utf-8')
+            (run / 'experiments_v1' / 'outputs' / 'qwen3_4b' / 'u0.json').write_text(
+                json.dumps({'natural_ar': good}, ensure_ascii=False), encoding='utf-8')
+            final = run / 'translation_step' / 'runs' / 'tr_x_final_v1'
+            final.mkdir(parents=True)
+            (final / 'translation_final.json').write_text(json.dumps(
+                {'units': [{'unit_id': t['unit_id'], 'natural_ar': good} for t in tasks]}, ensure_ascii=False),
+                encoding='utf-8')
+            logs = []
+            s = evaluate_lecture(run, systems=('qwen3_4b', 'absent'), qe=FakeQE(default=2.0),
+                                 speller=FakeSpeller(), log=logs.append)
+        self.assertEqual(s['final_v1']['gate_accept_pct'], 100.0)
+        self.assertEqual(s['qwen3_4b']['coverage_pct'], 50.0)
+        self.assertIn('missing system folder: absent', logs)
+        self.assertTrue(any(line.startswith('| final_v1 |') for line in logs[-1].splitlines()))
+
+
 class BenchmarkTests(unittest.TestCase):
     ROWS = [
         {'domain': 'speech', 'segment_id': 1, 'document_id': 'd', 'is_bad_source': False,

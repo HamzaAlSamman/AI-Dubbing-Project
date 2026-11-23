@@ -113,3 +113,62 @@ def status(job, tail=15):
     if job['done'] and job['result']:
         print(json.dumps(job['result'], ensure_ascii=False, indent=1))
     return job['done']
+
+
+# ---------------------------------------------------------------- lecture evaluation (same gate for every system)
+BASELINE_SYSTEMS = ('qwen3_4b', 'qwen3_8b', 'nllb_3b', 'S7_best_of_12_habibi_gate', 'hy_mt15_7b_nocontext',
+                    'gemini35_flash_lite_api')
+
+
+def evaluate_lecture(run_dir, *, systems=BASELINE_SYSTEMS, final_glob='*final_v1*', label='baseline_same_gate',
+                     repo_dir=None, qe=None, speller=None, work_subdir='translation_step', log=print):
+    """Score the final run and stored systems (experiments_v1/outputs/<name>/) with the gate of the
+    final run: same windows, same MetricX cache, same spelling check. `qwen3_4b` is the baseline
+    (the model of the first end-to-end run). Returns {system: metrics}; also writes
+    evaluations/<eval_id>/auto.json and appends to evaluations/registry.jsonl.
+
+    qe / speller: injectable for tests; by default MetricX-24 (sentence-level for long units,
+    disk-cached) and hunspell-ar."""
+    from .evaluate import Evaluation, from_run, from_unit_folder
+    run_dir = Path(run_dir)
+    work, exp = run_dir / work_subdir, run_dir / 'experiments_v1'
+    cfg = load_config()
+    tasks = load_tasks(exp / 'tasks.json')
+    windows = load_windows(tasks, run_dir / 'master_source_only.json')
+    found = {}
+    finals = sorted((work / 'runs').glob(final_glob))
+    if finals:
+        found['final_v1'] = from_run(finals[-1])
+    for name in systems:
+        folder = exp / 'outputs' / name
+        if folder.exists():
+            found[name] = from_unit_folder(folder)
+        else:
+            log(f'missing system folder: {name}')
+    metric = None
+    if qe is None:
+        from .scoring import CachedQE, MetricXQE, SegmentedQE
+        metric = MetricXQE(cfg['models']['qe'])
+        seg = cfg['gate'].get('qe_segment_min_words', 0)
+        qe = CachedQE(SegmentedQE(metric, seg) if seg else metric, work / 'cache' / 'qe_metricx24.jsonl')
+    if speller is None:
+        from .scoring import Hunspell
+        speller = Hunspell()
+    ev = Evaluation(work, tasks, cfg, label=label, repo_dir=repo_dir, qe_name=qe.name)
+    prov = {name: (str(finals[-1]) if name == 'final_v1' else f'experiments_v1/outputs/{name}') for name in found}
+    summary = ev.run_automatic(windows, found, qe, speller, provenance=prov)
+    if metric is not None:
+        metric.close()
+    log(f'eval_id: {ev.eval_id}')
+    log(format_table(summary))
+    return summary
+
+
+def format_table(summary):
+    cols = (('gate_accept_pct', 'accept%'), ('qe_mean', 'QE'), ('fits_natural_pct', 'fits%'),
+            ('needs_speedup_pct', 'speedup%'), ('too_long_pct', 'too_long%'), ('too_short_pct', 'too_short%'),
+            ('coverage_pct', 'cover%'))
+    lines = ['| system | ' + ' | '.join(h for _, h in cols) + ' |', '|---' * (len(cols) + 1) + '|']
+    for name, s in sorted(summary.items(), key=lambda kv: -kv[1]['gate_accept_pct']):
+        lines.append(f'| {name} | ' + ' | '.join(str(s.get(k)) for k, _ in cols) + ' |')
+    return '\n'.join(lines)

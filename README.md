@@ -6,6 +6,31 @@
 > المنهجية: [`translation/docs/METHODOLOGY.md`](translation/docs/METHODOLOGY.md).
 > الدراسات المعتمدة: [`translation/docs/REFERENCES.md`](translation/docs/REFERENCES.md).
 
+## هيكل المستودع
+
+| المجلد | المحتوى | الحالة |
+|---|---|---|
+| [`translation/`](translation/README.md) | خطوة الترجمة للدبلجة: المولّدات، والبوابة، والتصحيح، والترتيب، والتقييم، وتتبّع التجارب | **الإصدار الحالي** |
+| [`translation/notebooks/`](translation/notebooks/) | دفتر Colab لتقييم المحاضرة (بيانات خاصة على Drive) | جاهز |
+| [`translation/kaggle/`](translation/kaggle/) | دفتر Kaggle للمعيار المرجعي العام WMT24++ | جاهز |
+| [`translation/docs/`](translation/docs/) | المنهجية، والتقييم، وقرار الـ fine-tuning، والمراجع | محدَّث |
+| `arabic_dubbing_v2/`، `tests/`، `docs/`، `examples/`، `notebooks/` | الحزمة الأولى: عقد البيانات، وبناء الوحدات، والقاموس، وخطط الترجمة | سابقة، تبقى للمرجعية |
+
+## تسلسل التشغيل
+
+1. **التفريغ وبناء الوحدات:** دفتر Colab الرئيسي (WhisperX، ومحاذاة الكلمات، ووحدات الترجمة). البيانات تبقى على Drive.
+2. **الترجمة:** [`translation/colab/run_translation_step.py`](translation/colab/run_translation_step.py)، الخلايا 20.x.
+3. **التقييم على المحاضرة:** [`01_lecture_evaluation_colab.ipynb`](translation/notebooks/01_lecture_evaluation_colab.ipynb) ([فتح في Colab](https://colab.research.google.com/github/HamzaAlSamman/AI-Dubbing-Project/blob/evaluation-v2/translation/notebooks/01_lecture_evaluation_colab.ipynb)).
+4. **التقييم على بيانات عامة:** [`translation/kaggle/wmt24pp_benchmark/`](translation/kaggle/wmt24pp_benchmark/) على Kaggle.
+5. **الصوت:** Habibi TTS وفحص Whisper في دفتر Colab الرئيسي (الأقسام 18–19).
+
+المعايير والنتائج وما تبقى: [`translation/docs/EVALUATION.md`](translation/docs/EVALUATION.md).
+الاختبارات: `python -m unittest discover -s translation/tests` و`python -m unittest discover -s tests` (بلا نماذج ولا إنترنت).
+
+---
+
+## الحزمة الأولى (V2)
+
 **الحالة: حزمة برمجية مُختبرة محلياً على بيانات اصطناعية؛ ليست دبلجة نهائية أو موافقة على ترجمة المستخدم.**
 
 هذه الحزمة تنفّذ الأساس البرمجي للقرارات المعمارية في أقسام Figma `02.9–02.27`، خصوصاً:

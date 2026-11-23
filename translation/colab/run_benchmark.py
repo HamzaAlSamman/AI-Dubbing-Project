@@ -6,41 +6,17 @@
 # Everything is written under RUN_DIR/translation_step/evaluations and registered in
 # evaluations/registry.jsonl (one line per system and evaluation).
 
-# %% 21.1 — baseline (run A) and single systems on the lecture, same gate/windows/MetricX as final_v1
+# %% 21.1 — baseline (Qwen3-4B, the model of run A) and stored systems on the lecture, same gate as final_v1
+# Same code as notebooks/01_lecture_evaluation_colab.ipynb.
 import json, subprocess, sys
 from pathlib import Path
 subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', 'sacrebleu', 'datasets'], check=True)
-from dubbing_translation.evaluate import Evaluation, from_run, from_unit_folder   # noqa: E402
-from dubbing_translation.io import load_config, load_tasks, load_windows          # noqa: E402
-from dubbing_translation.scoring import CachedQE, Hunspell, MetricXQE, SegmentedQE  # noqa: E402
+from dubbing_translation.colab import evaluate_lecture   # noqa: E402
+from dubbing_translation.io import load_config            # noqa: E402
 
-WORK = RUN_DIR / 'translation_step'                                     # noqa: F821
+WORK = RUN_DIR / 'translation_step'                        # noqa: F821
 CFG = load_config()
-tasks = load_tasks(EXP_DIR / 'tasks.json')                              # noqa: F821
-windows = load_windows(tasks, RUN_DIR / 'master_source_only.json')      # noqa: F821
-print(sorted(p.name for p in EXP_OUT.iterdir() if p.is_dir()))         # noqa: F821  (check folder names)
-
-final_dir = sorted((WORK / 'runs').glob('*final_v1*'))[-1]
-systems = {'final_v1': from_run(final_dir)}
-# Baseline = qwen3_4b: the same Qwen3-4B model as run A (run A's agent outputs are not stored per unit).
-for name in ('qwen3_4b', 'qwen3_8b', 'nllb_3b', 'S7_best_of_12_habibi_gate', 'hy_mt15_7b_nocontext',
-             'gemini35_flash_lite_api'):
-    folder = EXP_OUT / name                                             # noqa: F821
-    if folder.exists():
-        systems[name] = from_unit_folder(folder)
-    else:
-        print('missing system folder (rename in the list above):', name)
-
-metric = MetricXQE(CFG['models']['qe'])
-qe = CachedQE(SegmentedQE(metric, CFG['gate']['qe_segment_min_words']), WORK / 'cache' / 'qe_metricx24.jsonl')
-ev = Evaluation(WORK, tasks, CFG, label='baseline_same_gate', repo_dir=TR_REPO, qe_name=qe.name)  # noqa: F821
-summary = ev.run_automatic(windows, systems, qe, Hunspell(),
-                           provenance={'final_v1': str(final_dir), **{k: f'experiments_v1/outputs/{k}'
-                                                                     for k in systems if k != 'final_v1'}})
-for name, s in sorted(summary.items(), key=lambda kv: -kv[1]['gate_accept_pct']):
-    print(f"{name:32s} accept {s['gate_accept_pct']:5.1f}%  QE {s['qe_mean']}  fits {s['fits_natural_pct']}%  "
-          f"too_long {s['too_long_pct']}%  coverage {s['coverage_pct']}%")
-metric.close()
+summary = evaluate_lecture(RUN_DIR, repo_dir=TR_REPO)      # noqa: F821
 
 # %% 22.1 — public test set with human MSA references: WMT24++ en->ar, speech domain
 from dubbing_translation.benchmark import as_tasks, generate_cached, load_wmt24pp_hf, run_reference  # noqa: E402
