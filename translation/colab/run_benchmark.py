@@ -22,7 +22,9 @@ print(sorted(p.name for p in EXP_OUT.iterdir() if p.is_dir()))         # noqa: F
 
 final_dir = sorted((WORK / 'runs').glob('*final_v1*'))[-1]
 systems = {'final_v1': from_run(final_dir)}
-for name in ('run_a', 'qwen3_4b', 'S7_best_of_12_habibi_gate', 'hy_mt15_7b_nocontext', 'gemini35_flash_lite_api'):
+# Baseline = qwen3_4b: the same Qwen3-4B model as run A (run A's agent outputs are not stored per unit).
+for name in ('qwen3_4b', 'qwen3_8b', 'nllb_3b', 'S7_best_of_12_habibi_gate', 'hy_mt15_7b_nocontext',
+             'gemini35_flash_lite_api'):
     folder = EXP_OUT / name                                             # noqa: F821
     if folder.exists():
         systems[name] = from_unit_folder(folder)
