@@ -9,7 +9,9 @@
   "enable_tpu": false,
   "enable_internet": true,
   "machine_shape": "NvidiaTeslaP100",
-  "dataset_sources": [],
+  "dataset_sources": [
+    "hamzaalsamman/dubbing-ar-wmt24pp-generations"
+  ],
   "competition_sources": [],
   "kernel_sources": [],
   "model_sources": []

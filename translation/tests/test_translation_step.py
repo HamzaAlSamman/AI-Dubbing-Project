@@ -320,6 +320,26 @@ class BenchmarkGenerationTests(unittest.TestCase):
         self.assertEqual(out['u1'], 'نص u1')
 
 
+class DegenerateOutputTests(unittest.TestCase):
+    def test_fail_fast_on_non_arabic_and_dtype_in_name(self):
+        from dubbing_translation.benchmark import DegenerateOutput, as_tasks, generate_cached
+        from dubbing_translation.generators import HFChatMT
+
+        class Broken:
+            name, calls = 'broken_gen', 0
+
+            def generate(self, task, budget):
+                Broken.calls += 1
+                return [{'text': '2017i3i3i3i3', 'variant': 'plain'}]
+
+        items = [{'unit_id': f'u{i}', 'source_text': 'a b c', 'reference': 'ر'} for i in range(10)]
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(DegenerateOutput):
+            generate_cached(Broken(), as_tasks(items), tmp, rate=RATE, log=lambda *_: None)
+        self.assertEqual(Broken.calls, 3)                                # stopped after the probe
+        self.assertTrue(HFChatMT('org/m', 'msa_plain', samples=0, compute_dtype='float32').name.endswith('_float32'))
+        self.assertEqual(HFChatMT('org/m', 'msa_plain', samples=0).name, 'org_m__msa_plain_g1s0')
+
+
 class ParsingTests(unittest.TestCase):
     def test_parse_json_object(self):
         self.assertEqual(parse_json_object('```json\n{"fit": "أ"}\n```'), {'fit': 'أ'})

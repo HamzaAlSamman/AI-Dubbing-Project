@@ -69,11 +69,20 @@ def as_tasks(items, words_per_second=SOURCE_WORDS_PER_SECOND):
              'slot_s': estimated_window(it, words_per_second).slot_s} for it in items]
 
 
-def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print):
+class DegenerateOutput(RuntimeError):
+    """A generator's first outputs are not Arabic: broken load (dtype, quantisation, custom code)."""
+
+
+def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print, probe=3, min_arabic=0.6):
     """Run one generator over the benchmark tasks with a resumable jsonl cache
     (cache_dir/<generator name>.jsonl, one line per unit). Returns {unit_id: first candidate}:
-    plain/greedy for MT models, 'fit' for the length-controlled LLM."""
+    plain/greedy for MT models, 'fit' for the length-controlled LLM.
+
+    Fail fast: if the first `probe` new outputs are all non-Arabic, raise DegenerateOutput instead
+    of spending hours of GPU on a model that did not load correctly (the probe lines stay in the
+    cache file as evidence; delete the file before a retry with other settings)."""
     from pathlib import Path
+    from .text import arabic_fraction
     from .timing import letter_budget
     budget_cfg = budget_cfg or {'low': 0.90, 'high': 1.05, 'short_factor': 0.80}
     path = Path(cache_dir) / f'{gen.name}.jsonl'
@@ -85,6 +94,7 @@ def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print):
                 rec = json.loads(line)
                 done[rec['unit_id']] = rec['items']
     todo = [t for t in tasks if t['unit_id'] not in done]
+    bad = 0
     for i, t in enumerate(todo, 1):
         w = Window(t['unit_id'], t['slot_s'], t['slot_s'])
         lo, hi = letter_budget(w, rate, low=budget_cfg['low'], high=budget_cfg['high'])
@@ -92,6 +102,11 @@ def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print):
         done[t['unit_id']] = items
         with path.open('a', encoding='utf-8') as f:
             f.write(json.dumps({'unit_id': t['unit_id'], 'items': items}, ensure_ascii=False) + '\n')
+        if i <= probe:
+            bad += not items or arabic_fraction(items[0]['text']) < min_arabic
+            if i == probe and bad == probe:
+                raise DegenerateOutput(f'{gen.name}: first {probe} outputs are not Arabic '
+                                       f'(e.g. {(items[0]["text"] if items else "")[:80]!r})')
         if i % 10 == 0 or i == len(todo):
             log(f'{gen.name}: {i}/{len(todo)} new units')
     return {u: items[0]['text'] for u, items in done.items() if items}

@@ -212,25 +212,29 @@ class HFChatMT:
     }
 
     def __init__(self, model_id, template='hy_mt2', *, samples=1, load_in_4bit=True, seed=0,
-                 sampling=None, trust_remote_code=False, template_kwargs=None):
+                 sampling=None, trust_remote_code=False, template_kwargs=None, compute_dtype='float16'):
         """trust_remote_code: models with custom code (Jais-3). template_kwargs: extra arguments of
-        apply_chat_template, e.g. {'enable_thinking': False} for Qwen3 hybrid-reasoning models."""
+        apply_chat_template, e.g. {'enable_thinking': False} for Qwen3 hybrid-reasoning models.
+        compute_dtype: 'float16' (default) or 'float32' for models that overflow in fp16 on T4/P100;
+        a non-default value is part of the generator name, so cached outputs never mix."""
         self.model_id, self.template, self.samples = model_id, template, samples
         self.trust_remote_code, self.template_kwargs = trust_remote_code, dict(template_kwargs or {})
-        self.load_in_4bit, self.seed = load_in_4bit, seed
+        self.load_in_4bit, self.seed, self.compute_dtype = load_in_4bit, seed, compute_dtype
         self.sampling = sampling or {'temperature': 0.7, 'top_p': 0.6, 'top_k': 20, 'repetition_penalty': 1.05}
-        self.name = f'{model_id.replace("/", "_")}__{template}_g1s{samples}'
+        self.name = f'{model_id.replace("/", "_")}__{template}_g1s{samples}' + (
+            '' if compute_dtype == 'float16' else f'_{compute_dtype}')
         self._tok = self._model = None
 
     def _load(self):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+        dtype = getattr(torch, self.compute_dtype)
         kw = {'device_map': 'auto', 'low_cpu_mem_usage': True}
         if self.load_in_4bit:
             kw['quantization_config'] = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type='nf4',
-                                                           bnb_4bit_compute_dtype=torch.float16)
+                                                           bnb_4bit_compute_dtype=dtype)
         else:
-            kw['torch_dtype'] = torch.float16
+            kw['torch_dtype'] = dtype
         rc = {'trust_remote_code': True} if self.trust_remote_code else {}
         self._tok = AutoTokenizer.from_pretrained(self.model_id, **rc)
         self._model = AutoModelForCausalLM.from_pretrained(self.model_id, **kw, **rc).eval()
