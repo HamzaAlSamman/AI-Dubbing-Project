@@ -131,8 +131,8 @@ class AgentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             execute_agent(p,s,d,backend=m,execute=True,allow_local=True,review_policy='none',max_new_calls=1)
             path=next(Path(d).glob('translate_*.json'))
-            v=json.loads(path.read_text());v['human_approved']=True
-            path.write_text(json.dumps(v))
+            v=json.loads(path.read_text(encoding='utf-8'));v['human_approved']=True
+            path.write_text(json.dumps(v),encoding='utf-8')
             with self.assertRaises(ValueError):execute_agent(p,s,d,backend=m,execute=True,
                 allow_local=True,review_policy='none',max_new_calls=2)
             self.assertEqual(len(m.calls),1)
@@ -142,8 +142,8 @@ class AgentTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             execute_agent(p,s,d,backend=m,execute=True,allow_local=True,review_policy='none')
             path=next(Path(d).glob('translate_*.json'))
-            v=json.loads(path.read_text());v['result']['natural_ar']='نص مختلف'
-            path.write_text(json.dumps(v))
+            v=json.loads(path.read_text(encoding='utf-8'));v['result']['natural_ar']='نص مختلف'
+            path.write_text(json.dumps(v),encoding='utf-8')
             with self.assertRaises(ValueError):execute_agent(p,s,d,backend=m,execute=True,
                 allow_local=True,review_policy='none')
             self.assertEqual(len(m.calls),1)

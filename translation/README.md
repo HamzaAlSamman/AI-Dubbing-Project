@@ -6,6 +6,8 @@
 
 **التوثيق:**
 - [المنهجية والتجارب والنتائج](docs/METHODOLOGY.md)
+- [التقييم: المعايير والنتائج وما تبقى](docs/EVALUATION.md)
+- دفاتر التقييم: [المحاضرة على Colab](notebooks/01_lecture_evaluation_colab.ipynb) · [المعيار العام WMT24++ على Kaggle](kaggle/wmt24pp_benchmark/wmt24pp_benchmark.ipynb)
 - [الدراسات المعتمدة](docs/REFERENCES.md) · [BibTeX](docs/references.bib)
 - [سكربت Colab لإعادة الإنتاج](colab/run_translation_step.py)
 

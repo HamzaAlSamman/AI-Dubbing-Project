@@ -222,6 +222,124 @@ class EvaluationTests(unittest.TestCase):
             self.assertEqual(json.loads(reg[0])['kind'], 'automatic')
 
 
+class LectureEvaluationTests(unittest.TestCase):
+    def test_evaluate_lecture_reads_drive_layout(self):
+        from dubbing_translation.colab import evaluate_lecture
+        good = arabic_of(int(3.0 * RATE))
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            tasks = [{'unit_id': f'u{i}', 'source_text': 'we take the values and use them now',
+                      'source_duration_s': 3.0} for i in range(2)]
+            (run / 'experiments_v1' / 'outputs' / 'qwen3_4b').mkdir(parents=True)
+            (run / 'experiments_v1' / 'tasks.json').write_text(json.dumps({'tasks': tasks}), encoding='utf-8')
+            (run / 'experiments_v1' / 'outputs' / 'qwen3_4b' / 'u0.json').write_text(
+                json.dumps({'natural_ar': good}, ensure_ascii=False), encoding='utf-8')
+            final = run / 'translation_step' / 'runs' / 'tr_x_final_v1'
+            final.mkdir(parents=True)
+            (final / 'translation_final.json').write_text(json.dumps(
+                {'units': [{'unit_id': t['unit_id'], 'natural_ar': good} for t in tasks]}, ensure_ascii=False),
+                encoding='utf-8')
+            logs = []
+            s = evaluate_lecture(run, systems=('qwen3_4b', 'absent'), qe=FakeQE(default=2.0),
+                                 speller=FakeSpeller(), log=logs.append)
+        self.assertEqual(s['final_v1']['gate_accept_pct'], 100.0)
+        self.assertEqual(s['qwen3_4b']['coverage_pct'], 50.0)
+        self.assertIn('missing system folder: absent', logs)
+        self.assertTrue(any(line.startswith('| final_v1 |') for line in logs[-1].splitlines()))
+
+
+class BenchmarkTests(unittest.TestCase):
+    ROWS = [
+        {'domain': 'speech', 'segment_id': 1, 'document_id': 'd', 'is_bad_source': False,
+         'source': 'one two three four five six seven eight nine ten', 'target': 'لهجة', 'original_target': 'فصحى'},
+        {'domain': 'speech', 'segment_id': 2, 'document_id': 'd', 'is_bad_source': True,
+         'source': 'bad source', 'target': 'x', 'original_target': 'y'},
+        {'domain': 'news', 'segment_id': 3, 'document_id': 'n', 'is_bad_source': False,
+         'source': 'news text', 'target': 'خبر', 'original_target': 'خبر'},
+    ]
+
+    def test_loader_uses_msa_reference_and_filters(self):
+        from dubbing_translation.benchmark import as_tasks, load_wmt24pp
+        items = load_wmt24pp(self.ROWS)
+        self.assertEqual([i['unit_id'] for i in items], ['wmt24pp_1'])
+        self.assertEqual(items[0]['reference'], 'فصحى')                 # original_target, not the dialect post-edit
+        self.assertEqual(len(load_wmt24pp(self.ROWS, domains=None)), 2)
+        self.assertAlmostEqual(as_tasks(items)[0]['slot_s'], round(10 / 2.6, 3))
+
+    def test_scores_lengths_zones_and_registry(self):
+        from dubbing_translation.benchmark import run_reference
+        from dubbing_translation.evaluate import Evaluation
+
+        class FakeRef:
+            name = 'fake-ref'
+
+            def score(self, triples):
+                return [0.0 if h == r else 5.0 for _, h, r in triples]
+
+        slot = 10 / 2.6
+        ref = arabic_of(int(slot * RATE))
+        items = [{'unit_id': 'u1', 'source_text': ' '.join(['w'] * 10), 'reference': ref}]
+        systems = {'same': {'u1': ref}, 'long': {'u1': arabic_of(int(slot * RATE * 1.6))}, 'none': {}}
+        with tempfile.TemporaryDirectory() as tmp:
+            ev = Evaluation(tmp, items, CFG, label='b')
+            s = run_reference(ev, items, systems, rate=RATE, ref_scorer=FakeRef())
+            self.assertEqual(s['same']['lc10_pct'], 100.0)
+            self.assertEqual(s['same']['metricx_ref_mean'], 0.0)
+            self.assertEqual(s['long']['too_long_pct'], 100.0)
+            self.assertEqual(s['long']['lc10_pct'], 0.0)
+            self.assertEqual(s['none']['coverage_pct'], 0.0)
+            self.assertIn('_human_reference', s)
+            reg = [json.loads(x) for x in
+                   (Path(tmp) / 'evaluations' / 'registry.jsonl').read_text(encoding='utf-8').splitlines()]
+            self.assertEqual({r['kind'] for r in reg}, {'reference'})
+            self.assertEqual(len(reg), 3)                                # the human reference row is not registered
+            self.assertTrue((ev.dir / 'reference.json').exists())
+
+
+class BenchmarkGenerationTests(unittest.TestCase):
+    def test_generate_cached_resumes_and_strips_reasoning(self):
+        from dubbing_translation.benchmark import as_tasks, generate_cached
+        from dubbing_translation.generators import strip_reasoning
+        self.assertEqual(strip_reasoning('<think>plan</think>\n ترجمة'), 'ترجمة')
+        self.assertEqual(strip_reasoning('<think>unfinished'), '')
+
+        class Gen:
+            name, calls = 'fake_gen', 0
+
+            def generate(self, task, budget):
+                Gen.calls += 1
+                assert budget['min'] <= budget['max']
+                return [{'text': 'نص ' + task['unit_id'], 'variant': 'plain'}]
+
+        items = [{'unit_id': f'u{i}', 'source_text': 'a b c d e', 'reference': 'ر'} for i in range(3)]
+        with tempfile.TemporaryDirectory() as tmp:
+            out = generate_cached(Gen(), as_tasks(items), tmp, rate=RATE, log=lambda *_: None)
+            again = generate_cached(Gen(), as_tasks(items), tmp, rate=RATE, log=lambda *_: None)
+        self.assertEqual(Gen.calls, 3)                                   # second pass reads the cache only
+        self.assertEqual(out, again)
+        self.assertEqual(out['u1'], 'نص u1')
+
+
+class DegenerateOutputTests(unittest.TestCase):
+    def test_fail_fast_on_non_arabic_and_dtype_in_name(self):
+        from dubbing_translation.benchmark import DegenerateOutput, as_tasks, generate_cached
+        from dubbing_translation.generators import HFChatMT
+
+        class Broken:
+            name, calls = 'broken_gen', 0
+
+            def generate(self, task, budget):
+                Broken.calls += 1
+                return [{'text': '2017i3i3i3i3', 'variant': 'plain'}]
+
+        items = [{'unit_id': f'u{i}', 'source_text': 'a b c', 'reference': 'ر'} for i in range(10)]
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(DegenerateOutput):
+            generate_cached(Broken(), as_tasks(items), tmp, rate=RATE, log=lambda *_: None)
+        self.assertEqual(Broken.calls, 3)                                # stopped after the probe
+        self.assertTrue(HFChatMT('org/m', 'msa_plain', samples=0, compute_dtype='float32').name.endswith('_float32'))
+        self.assertEqual(HFChatMT('org/m', 'msa_plain', samples=0).name, 'org_m__msa_plain_g1s0')
+
+
 class ParsingTests(unittest.TestCase):
     def test_parse_json_object(self):
         self.assertEqual(parse_json_object('```json\n{"fit": "أ"}\n```'), {'fit': 'أ'})
