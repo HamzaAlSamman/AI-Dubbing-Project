@@ -20,7 +20,7 @@
 
 1. **التفريغ وبناء الوحدات:** دفتر Colab الرئيسي (WhisperX، ومحاذاة الكلمات، ووحدات الترجمة). البيانات تبقى على Drive.
 2. **الترجمة:** [`translation/colab/run_translation_step.py`](translation/colab/run_translation_step.py)، الخلايا 20.x.
-3. **التقييم على المحاضرة:** [`01_lecture_evaluation_colab.ipynb`](translation/notebooks/01_lecture_evaluation_colab.ipynb) ([فتح في Colab](https://colab.research.google.com/github/HamzaAlSamman/AI-Dubbing-Project/blob/evaluation-v2/translation/notebooks/01_lecture_evaluation_colab.ipynb)).
+3. **التقييم على المحاضرة:** [`01_lecture_evaluation_colab.ipynb`](translation/notebooks/01_lecture_evaluation_colab.ipynb) ([فتح في Colab](https://colab.research.google.com/github/HamzaAlSamman/AI-Dubbing-Project/blob/main/translation/notebooks/01_lecture_evaluation_colab.ipynb)).
 4. **التقييم على بيانات عامة:** [`translation/kaggle/wmt24pp_benchmark/`](translation/kaggle/wmt24pp_benchmark/) على Kaggle.
 5. **الصوت:** Habibi TTS وفحص Whisper في دفتر Colab الرئيسي (الأقسام 18–19).
 
