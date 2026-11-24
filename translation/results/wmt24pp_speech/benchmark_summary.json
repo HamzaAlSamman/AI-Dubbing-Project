@@ -1,0 +1,60 @@
+{
+ "summary": {
+  "hy_mt15_7b": {
+   "units": 111,
+   "coverage_pct": 100.0,
+   "chrf_pp": 45.37,
+   "bleu": 15.86,
+   "sacrebleu": "2.6.0",
+   "metricx_ref_mean": 3.594,
+   "len_ratio_ref_median": 1.009,
+   "lc10_pct": 71.2,
+   "fits_or_speedup_pct": 97.3,
+   "too_long_pct": 1.8,
+   "too_short_pct": 0.9
+  },
+  "hy_mt2_7b": {
+   "units": 111,
+   "coverage_pct": 100.0,
+   "chrf_pp": 49.95,
+   "bleu": 22.01,
+   "sacrebleu": "2.6.0",
+   "metricx_ref_mean": 3.658,
+   "len_ratio_ref_median": 0.966,
+   "lc10_pct": 67.6,
+   "fits_or_speedup_pct": 98.2,
+   "too_long_pct": 0.9,
+   "too_short_pct": 0.9
+  },
+  "qwen3_4b_baseline": {
+   "units": 111,
+   "coverage_pct": 100.0,
+   "chrf_pp": 38.6,
+   "bleu": 11.85,
+   "sacrebleu": "2.6.0",
+   "metricx_ref_mean": 8.56,
+   "len_ratio_ref_median": 0.895,
+   "lc10_pct": 43.2,
+   "fits_or_speedup_pct": 98.2,
+   "too_long_pct": 0.0,
+   "too_short_pct": 1.8
+  },
+  "_human_reference": {
+   "units": 111,
+   "fits_or_speedup_pct": 96.4,
+   "too_long_pct": 2.7,
+   "too_short_pct": 0.9
+  }
+ },
+ "generation_seconds": {
+  "hy_mt15_7b": 0.2,
+  "hy_mt2_7b": 0.1,
+  "qwen3_4b_baseline": 0.1,
+  "jais3_7b": 383.5
+ },
+ "failures": {
+  "jais3_7b": "DegenerateOutput: inception42_Jais-3-7B__msa_plain_g1s0_float32: first 3 outputs are not Arabic (e.g. '* 2005. 2022. 2017i3iyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiyiy')"
+ },
+ "eval_id": "ev_20261124T062600Z_wmt24pp_speech",
+ "n_items": 111
+}

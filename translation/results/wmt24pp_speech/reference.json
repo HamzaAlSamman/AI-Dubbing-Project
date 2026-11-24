@@ -1,0 +1,3064 @@
+{
+ "meta": {
+  "eval_id": "ev_20261124T062600Z_wmt24pp_speech",
+  "tasks_sha256": "aef19baae6da9d4ea9ffaf5db7496be6dc62cd068ed7b3c21c524ed56028d3f6",
+  "gate_config_sha256": "ebed7a35e7765cad80fd70e4a87cd588455df73c54f058eaa2e5b5021960047e",
+  "git_commit": "00074491ad1b873e050d569591b67847890b0cb6",
+  "qe_metric": "metricx-24-hybrid-large-v2p6-ref",
+  "test_set": "wmt24pp_en-ar_SA_speech_original_target",
+  "n_items": 111,
+  "ref_metric": "metricx-24-hybrid-large-v2p6-ref"
+ },
+ "created_at": "2026-11-24T06:26:57.440368+00:00",
+ "provenance": {
+  "hy_mt15_7b": "tencent_HY-MT1.5-7B__plain_v1",
+  "hy_mt2_7b": "tencent_Hy-MT2-7B__hy_mt2_g1s0",
+  "qwen3_4b_baseline": "Qwen_Qwen3-4B__msa_plain_g1s0"
+ },
+ "summary": {
+  "hy_mt15_7b": {
+   "units": 111,
+   "coverage_pct": 100.0,
+   "chrf_pp": 45.37,
+   "bleu": 15.86,
+   "sacrebleu": "2.6.0",
+   "metricx_ref_mean": 3.594,
+   "len_ratio_ref_median": 1.009,
+   "lc10_pct": 71.2,
+   "fits_or_speedup_pct": 97.3,
+   "too_long_pct": 1.8,
+   "too_short_pct": 0.9
+  },
+  "hy_mt2_7b": {
+   "units": 111,
+   "coverage_pct": 100.0,
+   "chrf_pp": 49.95,
+   "bleu": 22.01,
+   "sacrebleu": "2.6.0",
+   "metricx_ref_mean": 3.658,
+   "len_ratio_ref_median": 0.966,
+   "lc10_pct": 67.6,
+   "fits_or_speedup_pct": 98.2,
+   "too_long_pct": 0.9,
+   "too_short_pct": 0.9
+  },
+  "qwen3_4b_baseline": {
+   "units": 111,
+   "coverage_pct": 100.0,
+   "chrf_pp": 38.6,
+   "bleu": 11.85,
+   "sacrebleu": "2.6.0",
+   "metricx_ref_mean": 8.56,
+   "len_ratio_ref_median": 0.895,
+   "lc10_pct": 43.2,
+   "fits_or_speedup_pct": 98.2,
+   "too_long_pct": 0.0,
+   "too_short_pct": 1.8
+  },
+  "_human_reference": {
+   "units": 111,
+   "fits_or_speedup_pct": 96.4,
+   "too_long_pct": 2.7,
+   "too_short_pct": 0.9
+  }
+ },
+ "rows": [
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_681",
+   "len_ratio_ref": 1.201,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.955,
+   "metricx_ref": 2.906809091567993
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_682",
+   "len_ratio_ref": 0.987,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.841,
+   "metricx_ref": 4.877330780029297
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_683",
+   "len_ratio_ref": 0.956,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.985,
+   "metricx_ref": 2.3579514026641846
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_684",
+   "len_ratio_ref": 1.036,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.041,
+   "metricx_ref": 2.2571704387664795
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_685",
+   "len_ratio_ref": 0.974,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.785,
+   "metricx_ref": 6.536674499511719
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_686",
+   "len_ratio_ref": 1.074,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.06,
+   "metricx_ref": 1.461810827255249
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_687",
+   "len_ratio_ref": 1.086,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.894,
+   "metricx_ref": 7.284183502197266
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_688",
+   "len_ratio_ref": 1.023,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.832,
+   "metricx_ref": 2.195648670196533
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_689",
+   "len_ratio_ref": 0.923,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.765,
+   "metricx_ref": 6.596692085266113
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_690",
+   "len_ratio_ref": 0.94,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.199,
+   "metricx_ref": 2.5134506225585938
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_691",
+   "len_ratio_ref": 0.991,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.725,
+   "metricx_ref": 1.1104285717010498
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_692",
+   "len_ratio_ref": 1.09,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.066,
+   "metricx_ref": 1.3844592571258545
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_693",
+   "len_ratio_ref": 1.031,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.794,
+   "metricx_ref": 7.556013584136963
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_694",
+   "len_ratio_ref": 0.93,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.86,
+   "metricx_ref": 1.8217666149139404
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_695",
+   "len_ratio_ref": 0.961,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.983,
+   "metricx_ref": 2.7059614658355713
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_696",
+   "len_ratio_ref": 0.889,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.8,
+   "metricx_ref": 8.913926124572754
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_697",
+   "len_ratio_ref": 1.102,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.82,
+   "metricx_ref": 2.3136210441589355
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_698",
+   "len_ratio_ref": 0.903,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.894,
+   "metricx_ref": 4.362699508666992
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_699",
+   "len_ratio_ref": 1.072,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.847,
+   "metricx_ref": 2.0586209297180176
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_700",
+   "len_ratio_ref": 0.958,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.833,
+   "metricx_ref": 5.549924850463867
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_701",
+   "len_ratio_ref": 0.915,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.847,
+   "metricx_ref": 4.1235809326171875
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_702",
+   "len_ratio_ref": 1.181,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.979,
+   "metricx_ref": 2.629730701446533
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_703",
+   "len_ratio_ref": 0.998,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.036,
+   "metricx_ref": 1.1597628593444824
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_704",
+   "len_ratio_ref": 0.985,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.791,
+   "metricx_ref": 2.2580811977386475
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_705",
+   "len_ratio_ref": 1.229,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.983,
+   "metricx_ref": 6.643527984619141
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_706",
+   "len_ratio_ref": 1.055,
+   "lc10": true,
+   "zone": "too_short",
+   "ratio_slot": 0.44,
+   "metricx_ref": 6.6713409423828125
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_707",
+   "len_ratio_ref": 1.044,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.918,
+   "metricx_ref": 2.202289581298828
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_708",
+   "len_ratio_ref": 1.2,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.917,
+   "metricx_ref": 4.6091814041137695
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_709",
+   "len_ratio_ref": 0.956,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.866,
+   "metricx_ref": 6.095006942749023
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_710",
+   "len_ratio_ref": 0.981,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.707,
+   "metricx_ref": 5.0424299240112305
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_711",
+   "len_ratio_ref": 0.955,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.066,
+   "metricx_ref": 1.3286290168762207
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_712",
+   "len_ratio_ref": 0.907,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.777,
+   "metricx_ref": 4.119004249572754
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_713",
+   "len_ratio_ref": 1.057,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.034,
+   "metricx_ref": 2.3863916397094727
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_714",
+   "len_ratio_ref": 0.837,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.855,
+   "metricx_ref": 6.921359539031982
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_715",
+   "len_ratio_ref": 1.005,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.902,
+   "metricx_ref": 0.946281909942627
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_716",
+   "len_ratio_ref": 0.93,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.871,
+   "metricx_ref": 1.6318471431732178
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_717",
+   "len_ratio_ref": 1.146,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.917,
+   "metricx_ref": 3.050971746444702
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_718",
+   "len_ratio_ref": 1.01,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.968,
+   "metricx_ref": 2.377690315246582
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_719",
+   "len_ratio_ref": 1.009,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.234,
+   "metricx_ref": 1.2215510606765747
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_720",
+   "len_ratio_ref": 0.966,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.853,
+   "metricx_ref": 3.336099863052368
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_721",
+   "len_ratio_ref": 0.755,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.698,
+   "metricx_ref": 3.447054386138916
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_722",
+   "len_ratio_ref": 1.026,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.882,
+   "metricx_ref": 7.619468688964844
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_723",
+   "len_ratio_ref": 0.91,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.878,
+   "metricx_ref": 4.3714985847473145
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_724",
+   "len_ratio_ref": 0.959,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.653,
+   "metricx_ref": 5.586666107177734
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_725",
+   "len_ratio_ref": 1.088,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.909,
+   "metricx_ref": 2.279658794403076
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_726",
+   "len_ratio_ref": 1.028,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.987,
+   "metricx_ref": 3.2070136070251465
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_727",
+   "len_ratio_ref": 1.037,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.168,
+   "metricx_ref": 6.294675827026367
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_728",
+   "len_ratio_ref": 1.01,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.909,
+   "metricx_ref": 3.0003292560577393
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_729",
+   "len_ratio_ref": 0.985,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.722,
+   "metricx_ref": 4.662830352783203
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_730",
+   "len_ratio_ref": 0.938,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.919,
+   "metricx_ref": 1.2547485828399658
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_731",
+   "len_ratio_ref": 1.162,
+   "lc10": false,
+   "zone": "too_long",
+   "ratio_slot": 1.281,
+   "metricx_ref": 2.0384702682495117
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_732",
+   "len_ratio_ref": 1.175,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.058,
+   "metricx_ref": 3.0863070487976074
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_733",
+   "len_ratio_ref": 1.152,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.908,
+   "metricx_ref": 1.1213438510894775
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_734",
+   "len_ratio_ref": 1.361,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.223,
+   "metricx_ref": 4.207311153411865
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_735",
+   "len_ratio_ref": 1.057,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.043,
+   "metricx_ref": 5.665284156799316
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_736",
+   "len_ratio_ref": 1.031,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.039,
+   "metricx_ref": 2.29689359664917
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_737",
+   "len_ratio_ref": 1.152,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.911,
+   "metricx_ref": 2.354099750518799
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_738",
+   "len_ratio_ref": 1.099,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.972,
+   "metricx_ref": 4.933017730712891
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_739",
+   "len_ratio_ref": 1.028,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.806,
+   "metricx_ref": 3.216169834136963
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_740",
+   "len_ratio_ref": 1.013,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.794,
+   "metricx_ref": 1.0590407848358154
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_741",
+   "len_ratio_ref": 1.138,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.896,
+   "metricx_ref": 3.2634525299072266
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_742",
+   "len_ratio_ref": 0.859,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.983,
+   "metricx_ref": 4.719546318054199
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_743",
+   "len_ratio_ref": 1.153,
+   "lc10": false,
+   "zone": "too_long",
+   "ratio_slot": 1.316,
+   "metricx_ref": 2.337268590927124
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_744",
+   "len_ratio_ref": 0.95,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.886,
+   "metricx_ref": 5.334482192993164
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_745",
+   "len_ratio_ref": 1.094,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.924,
+   "metricx_ref": 4.546023845672607
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_746",
+   "len_ratio_ref": 1.026,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.119,
+   "metricx_ref": 1.444676160812378
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_747",
+   "len_ratio_ref": 0.927,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.881,
+   "metricx_ref": 8.100789070129395
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_748",
+   "len_ratio_ref": 1.018,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.861,
+   "metricx_ref": 1.3353495597839355
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_749",
+   "len_ratio_ref": 1.083,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.156,
+   "metricx_ref": 3.065772533416748
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_750",
+   "len_ratio_ref": 0.859,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.031,
+   "metricx_ref": 2.564296245574951
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_751",
+   "len_ratio_ref": 0.95,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.099,
+   "metricx_ref": 1.5289816856384277
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_752",
+   "len_ratio_ref": 0.845,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.114,
+   "metricx_ref": 3.905366897583008
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_753",
+   "len_ratio_ref": 0.772,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.737,
+   "metricx_ref": 2.1745758056640625
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_754",
+   "len_ratio_ref": 0.991,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.867,
+   "metricx_ref": 3.842785358428955
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_755",
+   "len_ratio_ref": 0.974,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.839,
+   "metricx_ref": 6.607750415802002
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_756",
+   "len_ratio_ref": 1.232,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.027,
+   "metricx_ref": 3.2366466522216797
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_757",
+   "len_ratio_ref": 0.955,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.894,
+   "metricx_ref": 3.9576148986816406
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_758",
+   "len_ratio_ref": 0.955,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.74,
+   "metricx_ref": 5.290342330932617
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_759",
+   "len_ratio_ref": 1.029,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.973,
+   "metricx_ref": 1.8003469705581665
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_760",
+   "len_ratio_ref": 0.971,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.948,
+   "metricx_ref": 1.3414607048034668
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_761",
+   "len_ratio_ref": 1.098,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.983,
+   "metricx_ref": 2.007909059524536
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_762",
+   "len_ratio_ref": 0.942,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.032,
+   "metricx_ref": 1.840062141418457
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_763",
+   "len_ratio_ref": 1.007,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.077,
+   "metricx_ref": 1.9607645273208618
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_764",
+   "len_ratio_ref": 1.047,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.056,
+   "metricx_ref": 2.6484286785125732
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_765",
+   "len_ratio_ref": 0.791,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.891,
+   "metricx_ref": 1.6404531002044678
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_766",
+   "len_ratio_ref": 0.971,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.788,
+   "metricx_ref": 9.298892974853516
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_767",
+   "len_ratio_ref": 0.982,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.048,
+   "metricx_ref": 4.259958267211914
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_768",
+   "len_ratio_ref": 0.959,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.845,
+   "metricx_ref": 5.779152870178223
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_769",
+   "len_ratio_ref": 0.885,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.861,
+   "metricx_ref": 1.0360355377197266
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_770",
+   "len_ratio_ref": 1.296,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.812,
+   "metricx_ref": 3.41648530960083
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_771",
+   "len_ratio_ref": 0.917,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.939,
+   "metricx_ref": 3.7624378204345703
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_772",
+   "len_ratio_ref": 1.071,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.903,
+   "metricx_ref": 2.0395009517669678
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_773",
+   "len_ratio_ref": 0.906,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.747,
+   "metricx_ref": 3.662130355834961
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_774",
+   "len_ratio_ref": 1.159,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.823,
+   "metricx_ref": 0.9562844038009644
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_775",
+   "len_ratio_ref": 1.31,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.228,
+   "metricx_ref": 1.7540020942687988
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_776",
+   "len_ratio_ref": 1.0,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.749,
+   "metricx_ref": 8.69546890258789
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_777",
+   "len_ratio_ref": 1.004,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.957,
+   "metricx_ref": 6.437186241149902
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_778",
+   "len_ratio_ref": 0.951,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.054,
+   "metricx_ref": 1.9049005508422852
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_779",
+   "len_ratio_ref": 1.044,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.892,
+   "metricx_ref": 6.380583763122559
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_780",
+   "len_ratio_ref": 1.034,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.09,
+   "metricx_ref": 1.0201369524002075
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_781",
+   "len_ratio_ref": 0.92,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.912,
+   "metricx_ref": 1.6754391193389893
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_782",
+   "len_ratio_ref": 1.06,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.05,
+   "metricx_ref": 9.065372467041016
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_783",
+   "len_ratio_ref": 1.203,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.957,
+   "metricx_ref": 3.710615634918213
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_784",
+   "len_ratio_ref": 0.837,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.958,
+   "metricx_ref": 2.182476043701172
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_785",
+   "len_ratio_ref": 1.052,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.775,
+   "metricx_ref": 4.189609527587891
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_786",
+   "len_ratio_ref": 1.561,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.014,
+   "metricx_ref": 3.128455638885498
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_787",
+   "len_ratio_ref": 1.075,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.837,
+   "metricx_ref": 2.9456911087036133
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_788",
+   "len_ratio_ref": 0.798,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.617,
+   "metricx_ref": 4.217677116394043
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_789",
+   "len_ratio_ref": 0.774,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.077,
+   "metricx_ref": 2.5805134773254395
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_790",
+   "len_ratio_ref": 1.215,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.093,
+   "metricx_ref": 2.3670172691345215
+  },
+  {
+   "system": "hy_mt15_7b",
+   "unit_id": "wmt24pp_791",
+   "len_ratio_ref": 1.019,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.771,
+   "metricx_ref": 4.759885787963867
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_681",
+   "len_ratio_ref": 1.044,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.831,
+   "metricx_ref": 2.2155983448028564
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_682",
+   "len_ratio_ref": 0.84,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.716,
+   "metricx_ref": 5.165124416351318
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_683",
+   "len_ratio_ref": 0.953,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.983,
+   "metricx_ref": 3.4122118949890137
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_684",
+   "len_ratio_ref": 0.916,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.92,
+   "metricx_ref": 5.232685089111328
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_685",
+   "len_ratio_ref": 0.967,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.779,
+   "metricx_ref": 6.48497200012207
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_686",
+   "len_ratio_ref": 0.907,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.895,
+   "metricx_ref": 1.6934396028518677
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_687",
+   "len_ratio_ref": 0.906,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.746,
+   "metricx_ref": 6.861650466918945
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_688",
+   "len_ratio_ref": 0.869,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.708,
+   "metricx_ref": 3.4000377655029297
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_689",
+   "len_ratio_ref": 0.841,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.697,
+   "metricx_ref": 6.095009803771973
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_690",
+   "len_ratio_ref": 0.872,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.113,
+   "metricx_ref": 2.1661739349365234
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_691",
+   "len_ratio_ref": 0.868,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.634,
+   "metricx_ref": 1.1826739311218262
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_692",
+   "len_ratio_ref": 1.043,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.02,
+   "metricx_ref": 1.1134368181228638
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_693",
+   "len_ratio_ref": 0.986,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.759,
+   "metricx_ref": 6.380851745605469
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_694",
+   "len_ratio_ref": 0.967,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.894,
+   "metricx_ref": 2.867553949356079
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_695",
+   "len_ratio_ref": 0.915,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.936,
+   "metricx_ref": 2.6332545280456543
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_696",
+   "len_ratio_ref": 0.83,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.747,
+   "metricx_ref": 7.0181779861450195
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_697",
+   "len_ratio_ref": 1.024,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.762,
+   "metricx_ref": 4.151935577392578
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_698",
+   "len_ratio_ref": 0.853,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.844,
+   "metricx_ref": 2.6822509765625
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_699",
+   "len_ratio_ref": 1.044,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.825,
+   "metricx_ref": 2.0537140369415283
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_700",
+   "len_ratio_ref": 0.879,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.764,
+   "metricx_ref": 3.6803057193756104
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_701",
+   "len_ratio_ref": 0.889,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.823,
+   "metricx_ref": 4.16641902923584
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_702",
+   "len_ratio_ref": 1.102,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.913,
+   "metricx_ref": 1.9556386470794678
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_703",
+   "len_ratio_ref": 0.893,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.927,
+   "metricx_ref": 1.640822410583496
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_704",
+   "len_ratio_ref": 0.881,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.707,
+   "metricx_ref": 2.085885524749756
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_705",
+   "len_ratio_ref": 1.129,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.902,
+   "metricx_ref": 4.565799713134766
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_706",
+   "len_ratio_ref": 1.164,
+   "lc10": false,
+   "zone": "too_short",
+   "ratio_slot": 0.486,
+   "metricx_ref": 7.379525184631348
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_707",
+   "len_ratio_ref": 0.989,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.869,
+   "metricx_ref": 3.3976101875305176
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_708",
+   "len_ratio_ref": 1.184,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.905,
+   "metricx_ref": 3.4813222885131836
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_709",
+   "len_ratio_ref": 0.984,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.891,
+   "metricx_ref": 5.906554698944092
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_710",
+   "len_ratio_ref": 1.0,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.72,
+   "metricx_ref": 3.969635486602783
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_711",
+   "len_ratio_ref": 0.97,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.083,
+   "metricx_ref": 1.8191896677017212
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_712",
+   "len_ratio_ref": 0.949,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.812,
+   "metricx_ref": 3.9258980751037598
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_713",
+   "len_ratio_ref": 0.978,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.957,
+   "metricx_ref": 1.3213634490966797
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_714",
+   "len_ratio_ref": 1.058,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.081,
+   "metricx_ref": 8.011343002319336
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_715",
+   "len_ratio_ref": 0.905,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.813,
+   "metricx_ref": 1.1563928127288818
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_716",
+   "len_ratio_ref": 0.863,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.808,
+   "metricx_ref": 2.6686832904815674
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_717",
+   "len_ratio_ref": 1.075,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.86,
+   "metricx_ref": 2.955319881439209
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_718",
+   "len_ratio_ref": 1.039,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.997,
+   "metricx_ref": 3.509653091430664
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_719",
+   "len_ratio_ref": 0.998,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.22,
+   "metricx_ref": 1.20388662815094
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_720",
+   "len_ratio_ref": 1.024,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.905,
+   "metricx_ref": 2.694640636444092
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_721",
+   "len_ratio_ref": 0.865,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.799,
+   "metricx_ref": 4.10050106048584
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_722",
+   "len_ratio_ref": 0.961,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.826,
+   "metricx_ref": 6.828160285949707
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_723",
+   "len_ratio_ref": 0.907,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.875,
+   "metricx_ref": 7.059450149536133
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_724",
+   "len_ratio_ref": 0.985,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.67,
+   "metricx_ref": 4.4577813148498535
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_725",
+   "len_ratio_ref": 1.046,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.875,
+   "metricx_ref": 3.240109920501709
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_726",
+   "len_ratio_ref": 1.002,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.962,
+   "metricx_ref": 1.9926166534423828
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_727",
+   "len_ratio_ref": 0.926,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.043,
+   "metricx_ref": 11.21088981628418
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_728",
+   "len_ratio_ref": 0.914,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.823,
+   "metricx_ref": 4.354525566101074
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_729",
+   "len_ratio_ref": 0.99,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.726,
+   "metricx_ref": 5.147701263427734
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_730",
+   "len_ratio_ref": 1.027,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.006,
+   "metricx_ref": 1.4596073627471924
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_731",
+   "len_ratio_ref": 1.083,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.195,
+   "metricx_ref": 2.364794969558716
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_732",
+   "len_ratio_ref": 1.056,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.951,
+   "metricx_ref": 3.1814322471618652
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_733",
+   "len_ratio_ref": 0.993,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.783,
+   "metricx_ref": 1.2782700061798096
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_734",
+   "len_ratio_ref": 1.011,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.909,
+   "metricx_ref": 5.137880802154541
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_735",
+   "len_ratio_ref": 1.069,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.055,
+   "metricx_ref": 5.2168989181518555
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_736",
+   "len_ratio_ref": 0.969,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.976,
+   "metricx_ref": 1.9122899770736694
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_737",
+   "len_ratio_ref": 1.053,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.833,
+   "metricx_ref": 1.8654203414916992
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_738",
+   "len_ratio_ref": 0.96,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.849,
+   "metricx_ref": 6.409494400024414
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_739",
+   "len_ratio_ref": 0.962,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.754,
+   "metricx_ref": 3.5835981369018555
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_740",
+   "len_ratio_ref": 0.967,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.758,
+   "metricx_ref": 1.1401078701019287
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_741",
+   "len_ratio_ref": 1.025,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.807,
+   "metricx_ref": 2.5506277084350586
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_742",
+   "len_ratio_ref": 0.946,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.082,
+   "metricx_ref": 3.965545654296875
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_743",
+   "len_ratio_ref": 1.005,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.146,
+   "metricx_ref": 2.378159523010254
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_744",
+   "len_ratio_ref": 0.897,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.836,
+   "metricx_ref": 4.894755840301514
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_745",
+   "len_ratio_ref": 1.0,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.845,
+   "metricx_ref": 3.476674795150757
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_746",
+   "len_ratio_ref": 0.92,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.004,
+   "metricx_ref": 1.747915506362915
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_747",
+   "len_ratio_ref": 0.851,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.809,
+   "metricx_ref": 8.961668014526367
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_748",
+   "len_ratio_ref": 0.958,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.81,
+   "metricx_ref": 2.048780679702759
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_749",
+   "len_ratio_ref": 0.96,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.025,
+   "metricx_ref": 2.9192726612091064
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_750",
+   "len_ratio_ref": 0.855,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.026,
+   "metricx_ref": 4.0077972412109375
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_751",
+   "len_ratio_ref": 0.938,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.085,
+   "metricx_ref": 1.400468349456787
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_752",
+   "len_ratio_ref": 0.957,
+   "lc10": true,
+   "zone": "too_long",
+   "ratio_slot": 1.261,
+   "metricx_ref": 3.5854010581970215
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_753",
+   "len_ratio_ref": 0.786,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.751,
+   "metricx_ref": 2.4249587059020996
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_754",
+   "len_ratio_ref": 0.92,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.805,
+   "metricx_ref": 4.122767925262451
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_755",
+   "len_ratio_ref": 0.873,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.752,
+   "metricx_ref": 5.031468391418457
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_756",
+   "len_ratio_ref": 1.103,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.919,
+   "metricx_ref": 4.464585304260254
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_757",
+   "len_ratio_ref": 0.934,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.874,
+   "metricx_ref": 3.926225185394287
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_758",
+   "len_ratio_ref": 0.934,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.724,
+   "metricx_ref": 5.26939582824707
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_759",
+   "len_ratio_ref": 0.981,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.928,
+   "metricx_ref": 1.8990381956100464
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_760",
+   "len_ratio_ref": 0.942,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.92,
+   "metricx_ref": 1.1605687141418457
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_761",
+   "len_ratio_ref": 0.966,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.864,
+   "metricx_ref": 2.8595335483551025
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_762",
+   "len_ratio_ref": 0.86,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.942,
+   "metricx_ref": 1.7117156982421875
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_763",
+   "len_ratio_ref": 0.905,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.968,
+   "metricx_ref": 2.4465384483337402
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_764",
+   "len_ratio_ref": 0.97,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.978,
+   "metricx_ref": 3.7633347511291504
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_765",
+   "len_ratio_ref": 0.788,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.888,
+   "metricx_ref": 1.9605590105056763
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_766",
+   "len_ratio_ref": 0.933,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.757,
+   "metricx_ref": 7.85546875
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_767",
+   "len_ratio_ref": 0.799,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.853,
+   "metricx_ref": 4.682126045227051
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_768",
+   "len_ratio_ref": 0.989,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.871,
+   "metricx_ref": 6.727569103240967
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_769",
+   "len_ratio_ref": 0.885,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.861,
+   "metricx_ref": 1.02180814743042
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_770",
+   "len_ratio_ref": 1.168,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.732,
+   "metricx_ref": 2.4349751472473145
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_771",
+   "len_ratio_ref": 0.866,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.887,
+   "metricx_ref": 4.286043167114258
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_772",
+   "len_ratio_ref": 0.972,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.82,
+   "metricx_ref": 2.4654970169067383
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_773",
+   "len_ratio_ref": 0.918,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.756,
+   "metricx_ref": 3.155500888824463
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_774",
+   "len_ratio_ref": 0.967,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.686,
+   "metricx_ref": 1.2513856887817383
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_775",
+   "len_ratio_ref": 1.231,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.155,
+   "metricx_ref": 1.8412328958511353
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_776",
+   "len_ratio_ref": 0.983,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.737,
+   "metricx_ref": 6.509424209594727
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_777",
+   "len_ratio_ref": 0.985,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.939,
+   "metricx_ref": 6.537254333496094
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_778",
+   "len_ratio_ref": 0.901,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.999,
+   "metricx_ref": 2.562530755996704
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_779",
+   "len_ratio_ref": 1.027,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.877,
+   "metricx_ref": 7.1717681884765625
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_780",
+   "len_ratio_ref": 0.924,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.974,
+   "metricx_ref": 1.2249687910079956
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_781",
+   "len_ratio_ref": 0.887,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.879,
+   "metricx_ref": 1.7560921907424927
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_782",
+   "len_ratio_ref": 0.955,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.945,
+   "metricx_ref": 4.826498985290527
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_783",
+   "len_ratio_ref": 1.106,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.88,
+   "metricx_ref": 3.402094602584839
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_784",
+   "len_ratio_ref": 0.779,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.891,
+   "metricx_ref": 2.0761046409606934
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_785",
+   "len_ratio_ref": 1.004,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.74,
+   "metricx_ref": 3.8671751022338867
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_786",
+   "len_ratio_ref": 1.47,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.955,
+   "metricx_ref": 3.174229145050049
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_787",
+   "len_ratio_ref": 1.112,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.866,
+   "metricx_ref": 2.0857608318328857
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_788",
+   "len_ratio_ref": 1.021,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.79,
+   "metricx_ref": 3.7312707901000977
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_789",
+   "len_ratio_ref": 0.658,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.915,
+   "metricx_ref": 3.3889365196228027
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_790",
+   "len_ratio_ref": 1.042,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.938,
+   "metricx_ref": 3.0234131813049316
+  },
+  {
+   "system": "hy_mt2_7b",
+   "unit_id": "wmt24pp_791",
+   "len_ratio_ref": 1.028,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.778,
+   "metricx_ref": 5.719206809997559
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_681",
+   "len_ratio_ref": 0.966,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.768,
+   "metricx_ref": 6.697749137878418
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_682",
+   "len_ratio_ref": 0.781,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.665,
+   "metricx_ref": 13.749682426452637
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_683",
+   "len_ratio_ref": 0.888,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.915,
+   "metricx_ref": 7.90167760848999
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_684",
+   "len_ratio_ref": 0.911,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.916,
+   "metricx_ref": 8.07693862915039
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_685",
+   "len_ratio_ref": 0.409,
+   "lc10": false,
+   "zone": "too_short",
+   "ratio_slot": 0.33,
+   "metricx_ref": 15.930862426757812
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_686",
+   "len_ratio_ref": 0.974,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.961,
+   "metricx_ref": 3.458805561065674
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_687",
+   "len_ratio_ref": 0.95,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.781,
+   "metricx_ref": 12.994075775146484
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_688",
+   "len_ratio_ref": 0.865,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.704,
+   "metricx_ref": 8.910834312438965
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_689",
+   "len_ratio_ref": 0.884,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.733,
+   "metricx_ref": 11.587636947631836
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_690",
+   "len_ratio_ref": 0.781,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.997,
+   "metricx_ref": 6.076125144958496
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_691",
+   "len_ratio_ref": 0.996,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.728,
+   "metricx_ref": 1.4514305591583252
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_692",
+   "len_ratio_ref": 0.943,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.922,
+   "metricx_ref": 4.393815517425537
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_693",
+   "len_ratio_ref": 0.892,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.687,
+   "metricx_ref": 11.187322616577148
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_694",
+   "len_ratio_ref": 0.874,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.808,
+   "metricx_ref": 7.808119773864746
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_695",
+   "len_ratio_ref": 0.781,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.798,
+   "metricx_ref": 4.990439414978027
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_696",
+   "len_ratio_ref": 0.834,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.75,
+   "metricx_ref": 12.945600509643555
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_697",
+   "len_ratio_ref": 1.053,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.784,
+   "metricx_ref": 10.52436351776123
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_698",
+   "len_ratio_ref": 0.744,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.737,
+   "metricx_ref": 3.952312469482422
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_699",
+   "len_ratio_ref": 0.978,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.772,
+   "metricx_ref": 7.879569053649902
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_700",
+   "len_ratio_ref": 0.802,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.698,
+   "metricx_ref": 12.758256912231445
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_701",
+   "len_ratio_ref": 0.873,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.808,
+   "metricx_ref": 10.27676773071289
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_702",
+   "len_ratio_ref": 1.013,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.84,
+   "metricx_ref": 6.210320949554443
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_703",
+   "len_ratio_ref": 0.902,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.937,
+   "metricx_ref": 3.414457321166992
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_704",
+   "len_ratio_ref": 0.81,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.651,
+   "metricx_ref": 4.355381011962891
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_705",
+   "len_ratio_ref": 1.056,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.845,
+   "metricx_ref": 12.832578659057617
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_706",
+   "len_ratio_ref": 1.493,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.623,
+   "metricx_ref": 14.893804550170898
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_707",
+   "len_ratio_ref": 0.978,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.86,
+   "metricx_ref": 4.090315818786621
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_708",
+   "len_ratio_ref": 0.969,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.74,
+   "metricx_ref": 7.662848949432373
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_709",
+   "len_ratio_ref": 0.879,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.795,
+   "metricx_ref": 12.6508207321167
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_710",
+   "len_ratio_ref": 1.075,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.774,
+   "metricx_ref": 9.951053619384766
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_711",
+   "len_ratio_ref": 0.845,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.944,
+   "metricx_ref": 5.908597469329834
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_712",
+   "len_ratio_ref": 0.704,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.602,
+   "metricx_ref": 7.809816360473633
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_713",
+   "len_ratio_ref": 0.863,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.845,
+   "metricx_ref": 3.791149139404297
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_714",
+   "len_ratio_ref": 0.827,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.845,
+   "metricx_ref": 12.131213188171387
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_715",
+   "len_ratio_ref": 0.958,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.86,
+   "metricx_ref": 1.9789454936981201
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_716",
+   "len_ratio_ref": 0.777,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.728,
+   "metricx_ref": 6.570154666900635
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_717",
+   "len_ratio_ref": 0.854,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.683,
+   "metricx_ref": 10.476175308227539
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_718",
+   "len_ratio_ref": 0.99,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.95,
+   "metricx_ref": 9.570731163024902
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_719",
+   "len_ratio_ref": 0.908,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.11,
+   "metricx_ref": 3.1639487743377686
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_720",
+   "len_ratio_ref": 1.049,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.927,
+   "metricx_ref": 5.770841598510742
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_721",
+   "len_ratio_ref": 1.021,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.944,
+   "metricx_ref": 11.274314880371094
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_722",
+   "len_ratio_ref": 0.701,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.603,
+   "metricx_ref": 13.496883392333984
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_723",
+   "len_ratio_ref": 0.72,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.695,
+   "metricx_ref": 6.035335540771484
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_724",
+   "len_ratio_ref": 0.914,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.622,
+   "metricx_ref": 10.016772270202637
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_725",
+   "len_ratio_ref": 0.938,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.784,
+   "metricx_ref": 9.679235458374023
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_726",
+   "len_ratio_ref": 0.967,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.929,
+   "metricx_ref": 9.01213264465332
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_727",
+   "len_ratio_ref": 0.761,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.857,
+   "metricx_ref": 13.558406829833984
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_728",
+   "len_ratio_ref": 0.852,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.767,
+   "metricx_ref": 14.50577163696289
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_729",
+   "len_ratio_ref": 0.785,
+   "lc10": false,
+   "zone": "too_short",
+   "ratio_slot": 0.576,
+   "metricx_ref": 7.479961395263672
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_730",
+   "len_ratio_ref": 0.888,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.87,
+   "metricx_ref": 2.3118109703063965
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_731",
+   "len_ratio_ref": 1.031,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.137,
+   "metricx_ref": 4.761204719543457
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_732",
+   "len_ratio_ref": 0.888,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.8,
+   "metricx_ref": 7.8811140060424805
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_733",
+   "len_ratio_ref": 1.036,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.817,
+   "metricx_ref": 3.952817440032959
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_734",
+   "len_ratio_ref": 1.06,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.953,
+   "metricx_ref": 9.892292022705078
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_735",
+   "len_ratio_ref": 0.873,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.862,
+   "metricx_ref": 11.780960083007812
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_736",
+   "len_ratio_ref": 0.85,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.857,
+   "metricx_ref": 5.6989006996154785
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_737",
+   "len_ratio_ref": 0.924,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.731,
+   "metricx_ref": 10.728010177612305
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_738",
+   "len_ratio_ref": 0.92,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.813,
+   "metricx_ref": 17.575002670288086
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_739",
+   "len_ratio_ref": 0.924,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.725,
+   "metricx_ref": 8.683216094970703
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_740",
+   "len_ratio_ref": 0.96,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.753,
+   "metricx_ref": 2.208678722381592
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_741",
+   "len_ratio_ref": 0.865,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.681,
+   "metricx_ref": 9.854238510131836
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_742",
+   "len_ratio_ref": 0.839,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.96,
+   "metricx_ref": 5.0745849609375
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_743",
+   "len_ratio_ref": 0.684,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.781,
+   "metricx_ref": 11.808109283447266
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_744",
+   "len_ratio_ref": 0.843,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.787,
+   "metricx_ref": 10.889505386352539
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_745",
+   "len_ratio_ref": 1.158,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.978,
+   "metricx_ref": 6.897747993469238
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_746",
+   "len_ratio_ref": 0.912,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.995,
+   "metricx_ref": 10.214101791381836
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_747",
+   "len_ratio_ref": 0.872,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.829,
+   "metricx_ref": 12.031723022460938
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_748",
+   "len_ratio_ref": 1.027,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.869,
+   "metricx_ref": 6.493963718414307
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_749",
+   "len_ratio_ref": 0.825,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.881,
+   "metricx_ref": 12.316434860229492
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_750",
+   "len_ratio_ref": 0.767,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.92,
+   "metricx_ref": 6.936212062835693
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_751",
+   "len_ratio_ref": 0.892,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.032,
+   "metricx_ref": 4.377377033233643
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_752",
+   "len_ratio_ref": 0.553,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.729,
+   "metricx_ref": 11.321357727050781
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_753",
+   "len_ratio_ref": 0.782,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.746,
+   "metricx_ref": 8.727126121520996
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_754",
+   "len_ratio_ref": 0.906,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.793,
+   "metricx_ref": 11.226221084594727
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_755",
+   "len_ratio_ref": 0.899,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.775,
+   "metricx_ref": 9.749594688415527
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_756",
+   "len_ratio_ref": 0.982,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.819,
+   "metricx_ref": 11.678056716918945
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_757",
+   "len_ratio_ref": 0.806,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.755,
+   "metricx_ref": 8.301215171813965
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_758",
+   "len_ratio_ref": 0.84,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.651,
+   "metricx_ref": 13.119335174560547
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_759",
+   "len_ratio_ref": 0.865,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.819,
+   "metricx_ref": 7.138228893280029
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_760",
+   "len_ratio_ref": 0.76,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.743,
+   "metricx_ref": 6.2236833572387695
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_761",
+   "len_ratio_ref": 0.966,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.864,
+   "metricx_ref": 15.890278816223145
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_762",
+   "len_ratio_ref": 0.83,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.909,
+   "metricx_ref": 2.5841479301452637
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_763",
+   "len_ratio_ref": 0.895,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.957,
+   "metricx_ref": 6.895312309265137
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_764",
+   "len_ratio_ref": 1.0,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.008,
+   "metricx_ref": 6.631478786468506
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_765",
+   "len_ratio_ref": 0.782,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.882,
+   "metricx_ref": 5.0878496170043945
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_766",
+   "len_ratio_ref": 0.883,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.716,
+   "metricx_ref": 11.616539001464844
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_767",
+   "len_ratio_ref": 0.887,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.948,
+   "metricx_ref": 10.120328903198242
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_768",
+   "len_ratio_ref": 0.896,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.789,
+   "metricx_ref": 8.36551284790039
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_769",
+   "len_ratio_ref": 0.88,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.856,
+   "metricx_ref": 4.667807579040527
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_770",
+   "len_ratio_ref": 1.4,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.877,
+   "metricx_ref": 4.769527435302734
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_771",
+   "len_ratio_ref": 0.909,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.931,
+   "metricx_ref": 10.336446762084961
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_772",
+   "len_ratio_ref": 0.98,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.827,
+   "metricx_ref": 6.204673767089844
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_773",
+   "len_ratio_ref": 0.906,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.747,
+   "metricx_ref": 7.814376354217529
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_774",
+   "len_ratio_ref": 0.995,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.706,
+   "metricx_ref": 6.60609245300293
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_775",
+   "len_ratio_ref": 1.126,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.056,
+   "metricx_ref": 4.146791934967041
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_776",
+   "len_ratio_ref": 0.833,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.625,
+   "metricx_ref": 17.57748794555664
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_777",
+   "len_ratio_ref": 0.915,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.873,
+   "metricx_ref": 14.409008026123047
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_778",
+   "len_ratio_ref": 0.911,
+   "lc10": true,
+   "zone": "speedup",
+   "ratio_slot": 1.01,
+   "metricx_ref": 2.2622692584991455
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_779",
+   "len_ratio_ref": 1.022,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.873,
+   "metricx_ref": 10.15614128112793
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_780",
+   "len_ratio_ref": 0.929,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.98,
+   "metricx_ref": 2.66164493560791
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_781",
+   "len_ratio_ref": 0.815,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.808,
+   "metricx_ref": 9.024916648864746
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_782",
+   "len_ratio_ref": 0.737,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.73,
+   "metricx_ref": 15.15690803527832
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_783",
+   "len_ratio_ref": 0.959,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.763,
+   "metricx_ref": 5.56419563293457
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_784",
+   "len_ratio_ref": 0.696,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.797,
+   "metricx_ref": 4.0203328132629395
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_785",
+   "len_ratio_ref": 1.028,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.758,
+   "metricx_ref": 12.046911239624023
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_786",
+   "len_ratio_ref": 1.159,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.753,
+   "metricx_ref": 6.721622943878174
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_787",
+   "len_ratio_ref": 0.954,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.743,
+   "metricx_ref": 7.6844282150268555
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_788",
+   "len_ratio_ref": 0.863,
+   "lc10": false,
+   "zone": "fits",
+   "ratio_slot": 0.667,
+   "metricx_ref": 6.0451436042785645
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_789",
+   "len_ratio_ref": 0.744,
+   "lc10": false,
+   "zone": "speedup",
+   "ratio_slot": 1.035,
+   "metricx_ref": 10.348002433776855
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_790",
+   "len_ratio_ref": 1.008,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.906,
+   "metricx_ref": 9.823673248291016
+  },
+  {
+   "system": "qwen3_4b_baseline",
+   "unit_id": "wmt24pp_791",
+   "len_ratio_ref": 1.054,
+   "lc10": true,
+   "zone": "fits",
+   "ratio_slot": 0.798,
+   "metricx_ref": 13.235184669494629
+  }
+ ]
+}

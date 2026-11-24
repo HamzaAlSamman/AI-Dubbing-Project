@@ -1,0 +1,40 @@
+{
+ "metric": "metricx-24-hybrid-large-v2p6-ref (lower is better)",
+ "bootstrap": 2000,
+ "seed": 0,
+ "pairs": {
+  "hy_mt15_7b_vs_hy_mt2_7b": {
+   "mean_diff_b_minus_a": 0.064,
+   "ci95": [
+    -0.138,
+    0.267
+   ],
+   "a_better_by_0.5": 30,
+   "b_better_by_0.5": 25,
+   "within_0.5": 56,
+   "n": 111
+  },
+  "hy_mt15_7b_vs_qwen3_4b_baseline": {
+   "mean_diff_b_minus_a": 4.966,
+   "ci95": [
+    4.456,
+    5.47
+   ],
+   "a_better_by_0.5": 107,
+   "b_better_by_0.5": 0,
+   "within_0.5": 4,
+   "n": 111
+  },
+  "hy_mt2_7b_vs_qwen3_4b_baseline": {
+   "mean_diff_b_minus_a": 4.902,
+   "ci95": [
+    4.403,
+    5.414
+   ],
+   "a_better_by_0.5": 108,
+   "b_better_by_0.5": 1,
+   "within_0.5": 2,
+   "n": 111
+  }
+ }
+}
