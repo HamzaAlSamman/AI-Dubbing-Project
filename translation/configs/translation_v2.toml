@@ -58,6 +58,11 @@ refine_provider = "gemini"
 refine_model = "gemini-3.5-flash-lite"
 refine_min_interval_s = 4.5
 llm_timeout_s = 180
+# Failures are never cached as results; they go to a failure ledger next to the result path.
+max_consecutive_failures = 3 # service failures in a row before a generator stops for the run
+max_unit_attempts = 3        # invalid-JSON answers per unit before the unit is blocked
+retry_errors = false         # true (after fixing the cause): blocked units get one more attempt;
+                             # results already cached are never regenerated or deleted
 
 [language]
 # Simple-MSA policy (dialect words reject, stiff translation patterns are flagged) and the glossary.

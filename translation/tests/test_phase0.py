@@ -914,3 +914,56 @@ class CoverageTests(unittest.TestCase):
         self.assertEqual((r['translation_test'], r['audio_sync']), (True, False))
         self.assertEqual(r['units_without_timing'], ['a', 'b', 'c'])
         self.assertTrue(all(v['start'] is None and v['end'] is None for v in refs.values()))
+
+
+# ---------------------------------------------------------------- development smoke test helpers
+class SmokeTestHelperTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory()
+        self.tasks = [{'unit_id': f'tu_{i:04d}', 'source_text': f'sentence {i}.', 'context_before': [f'c{i - 1}'],
+                       'context_after': [f'c{i + 1}'], 'source_duration_s': 3.0} for i in range(10)]
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_select_units_keeps_order_and_context_and_needs_consecutive_ids(self):
+        from dubbing_translation.colab import select_units
+        sel = select_units(self.tasks, ['tu_0005', 'tu_0003', 'tu_0004'])
+        self.assertEqual([t['unit_id'] for t in sel], ['tu_0003', 'tu_0004', 'tu_0005'])
+        self.assertEqual(sel[0]['context_before'], ['c2'])                 # original context kept
+        with self.assertRaises(ValueError):
+            select_units(self.tasks, ['tu_0003', 'tu_0005'])
+        with self.assertRaises(ValueError):
+            select_units(self.tasks, ['tu_0099'])
+
+    def test_smoke_and_replay_checks_on_a_cached_rerun(self):
+        from dubbing_translation.colab import replay_check, smoke_check
+        from dubbing_translation.io import V2_CONFIG, load_config
+        from dubbing_translation.pipeline import run
+        from dubbing_translation.timing import Window
+        from test_translation_step import FakeQE, FakeSpeller, FixedGen, arabic_of
+        cfg = load_config(V2_CONFIG)
+        cfg['language']['glossary'] = ''                                   # policy on, no LLM glossary
+        cfg['polish']['enabled'] = False
+        tasks = self.tasks[3:6]
+        ids = [t['unit_id'] for t in tasks]
+        n = int(3.0 * cfg['voice']['letters_per_second'])
+        gens = [FixedGen(g, {u: arabic_of(n - k) for u in ids}) for k, g in enumerate(('a', 'b', 'c'))]
+        windows = {u: Window(u, 3.0, 3.0) for u in ids}
+        timing = {u: {'start': float(i), 'end': i + 2.5, 'words': None} for i, u in enumerate(ids)}
+        mem = Path(self.tmp.name) / 'mem' / 'dev_smoke_test.json'
+        work = Path(self.tmp.name) / 'translation_step_dev_smoke_test'
+        r1, _, _ = run(tasks, windows, cfg, work, generators=gens, qe=FakeQE(), speller=FakeSpeller(),
+                       log=lambda *_: None, source_timing=timing, course_memory=mem, run_label='smoke')
+        sc = smoke_check(r1, expected_units=ids, course_memory=mem)
+        for k in ('06_three_generators', '07_quality_gate', '09_translation_final_schema', '10_source_ids_and_timings',
+                  '11_manifest_memory_cache', 'infrastructure'):
+            self.assertTrue(sc[k]['ok'], (k, sc[k]))
+        calls_before = [g.calls for g in gens]
+        r2, _, _ = run(tasks, windows, cfg, work, generators=gens, qe=FakeQE(), speller=FakeSpeller(),
+                       log=lambda *_: None, source_timing=timing,
+                       course_memory_snapshot=Path(r1) / 'course_memory_snapshot.json', run_label='replay')
+        self.assertEqual([g.calls for g in gens], calls_before)            # served by the caches
+        rc = replay_check(r1, r2)
+        self.assertTrue(rc['ok'], rc)

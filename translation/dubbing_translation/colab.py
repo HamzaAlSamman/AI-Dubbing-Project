@@ -41,27 +41,51 @@ def _seed_from_csv(units_csv, tasks, cache_path, metric_name, min_words=0):
     return added
 
 
-def refine_client(m):
+def refine_client(m, budget=None):
     from .generators import LLMClient
     return LLMClient(m.get('refine_provider', m['llm_provider']), m.get('refine_model', m['llm_model']),
                      min_interval_s=m.get('refine_min_interval_s', m['llm_min_interval_s']),
-                     timeout_s=m.get('llm_timeout_s', 180), thinking_budget=m.get('refine_thinking_budget'))
+                     timeout_s=m.get('llm_timeout_s', 180), thinking_budget=m.get('refine_thinking_budget'),
+                     budget=budget)
+
+
+def select_units(tasks, units):
+    """The tasks of `units` (ids), which must be consecutive in the lesson; each keeps its original context."""
+    ids = [t['unit_id'] for t in tasks]
+    missing = [u for u in units if u not in ids]
+    if missing:
+        raise ValueError(f'units not in this lesson: {missing}')
+    pos = sorted(ids.index(u) for u in units)
+    if pos != list(range(pos[0], pos[0] + len(pos))):
+        raise ValueError('the smoke-test units must be consecutive')
+    return [tasks[i] for i in pos]
 
 
 def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, use_hymt=False, use_llm=True,
-          refine=True, label='', seed_csv=None, overrides=None, hf_models=(), rank=True, course_memory=None):
+          refine=True, label='', seed_csv=None, overrides=None, hf_models=(), rank=True, course_memory=None,
+          units=None, max_llm_calls=None, course_memory_snapshot=None, retry_errors=False):
     """hf_models: [(model_id, template, n_samples)], e.g. [('tencent/Hy-MT2-7B', 'hy_mt2', 1)].
-    course_memory: JSON path shared by all videos of the course (terminology kept the same across videos)."""
-    from .generators import HFChatMT, HyMT, IsometricLLM, LLMClient, Replay
+    course_memory: JSON path shared by all videos of the course (terminology kept the same across videos).
+    units: only these consecutive unit ids (development smoke test); windows and context stay those of the
+      whole lesson. max_llm_calls: one cap on LLM requests shared by every LLM role of the run (0 = none
+      allowed: a replay must be served by the caches). course_memory_snapshot: replay that exact prior,
+      write no memory. retry_errors: retry stored failures once (after their cause is fixed)."""
+    from .generators import CallBudget, HFChatMT, HyMT, IsometricLLM, LLMClient, Replay
     from .pipeline import run
     from .scoring import CachedQE, Hunspell, MetricXQE, SegmentedQE
 
     run_dir = Path(run_dir)
     work = run_dir / work_subdir
     cfg = load_config(config, **(overrides or {})) if config else load_config(**(overrides or {}))
+    if retry_errors:
+        cfg.setdefault('models', {})['retry_errors'] = True
     tasks = load_tasks(run_dir / 'experiments_v1' / 'tasks.json')
-    windows = load_windows(tasks, run_dir / 'master_source_only.json')
-    job = {'log': [], 'done': False, 'error': None, 'result': None, 'work_dir': str(work)}
+    windows = load_windows(tasks, run_dir / 'master_source_only.json')     # whole lesson: real neighbours
+    if units:
+        tasks = select_units(tasks, units)
+        windows = {t['unit_id']: windows[t['unit_id']] for t in tasks}
+    budget = CallBudget(max_llm_calls)
+    job = {'log': [], 'done': False, 'error': None, 'result': None, 'work_dir': str(work), 'budget': budget}
     log = job['log'].append
 
     def _target():
@@ -80,9 +104,9 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             if use_llm:
                 gens.append(IsometricLLM(LLMClient(m['llm_provider'], m['llm_model'],
                                                    min_interval_s=m['llm_min_interval_s'],
-                                                   timeout_s=m.get('llm_timeout_s', 180)),
+                                                   timeout_s=m.get('llm_timeout_s', 180), budget=budget),
                                      language_aware=bool(cfg.get('language'))))
-            client = refine_client(m) if refine else None
+            client = refine_client(m, budget) if refine else None
             if not refine:
                 cfg['refine']['enabled'] = False
             metric = MetricXQE(m['qe'])
@@ -97,15 +121,17 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             if rank and cfg.get('rank', {}).get('enabled'):
                 rc = cfg['rank']
                 ranker = LLMClient(rc['provider'], rc['model'], min_interval_s=m['llm_min_interval_s'],
-                                   timeout_s=m.get('llm_timeout_s', 180))
+                                   timeout_s=m.get('llm_timeout_s', 180), budget=budget)
             run_path, final, metrics = run(tasks, windows, cfg, work, generators=gens, qe=qe, speller=Hunspell(),
                                            refine_client=client, rank_client=ranker, repo_dir=repo, run_label=label,
-                                           course_memory=course_memory, video_id=run_dir.name,
+                                           course_memory=None if course_memory_snapshot else course_memory,
+                                           course_memory_snapshot=course_memory_snapshot, video_id=run_dir.name,
                                            environment=env_report,
                                            source_timing=load_source_timing(tasks, run_dir / 'master_source_only.json'),
                                            log=log)
             metric.close()
-            job['result'] = {'run_dir': str(run_path), 'metrics': metrics}
+            job['result'] = {'run_dir': str(run_path), 'metrics': metrics, 'llm_requests': budget.used,
+                             'llm_request_cap': budget.limit, 'gpu_peak_gb': _gpu_peak_gb()}
         except Exception as exc:                     # noqa: BLE001 - reported to the notebook
             job['error'] = f'{type(exc).__name__}: {exc}\n' + traceback.format_exc(limit=4)
         finally:
@@ -114,6 +140,14 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
     job['thread'] = threading.Thread(target=_target, daemon=True)
     job['thread'].start()
     return job
+
+
+def _gpu_peak_gb():
+    try:
+        import torch
+        return round(torch.cuda.max_memory_allocated() / 1e9, 2) if torch.cuda.is_available() else None
+    except ImportError:
+        return None
 
 
 def status(job, tail=15):
@@ -215,3 +249,92 @@ def compare_v1_v2(run_dir, v2_run, *, work_subdir='translation_step', v1_glob='*
                        'dialect_units': sum(bool(f['dialect']) for f in found),
                        'polished_units': sum(bool(u.get('polished_from')) for u in units)}
     return table
+
+
+# ---------------------------------------------------------------- development smoke test
+def smoke_check(run_dir, *, expected_units, expected_commit=None, course_memory=None):
+    """Engineering checks of one smoke-test run (not a quality evaluation). Returns {check: {ok, detail}}
+    and writes smoke_check.json next to the run. expected_units: the ORIGINAL unit ids, in order."""
+    import hashlib
+    from .contract import validate_final
+    run_dir = Path(run_dir)
+    doc = json.loads((run_dir / 'translation_final.json').read_text(encoding='utf-8'))
+    man = json.loads((run_dir / 'manifest.json').read_text(encoding='utf-8'))
+    met = json.loads((run_dir / 'metrics.json').read_text(encoding='utf-8'))
+    st = man.get('status') or {}
+    out = {}
+
+    def check(name, ok, detail=''):
+        out[name] = {'ok': bool(ok), 'detail': detail}
+
+    env = man.get('environment') or {}
+    check('03_preflight_recorded', env.get('versions'), env.get('versions'))
+    lang = man.get('language') or {}
+    check('05_glossary_built', lang.get('glossary_file') and 'glossary:not built' not in st.get('reasons', []),
+          f"{lang.get('glossary_terms')} terms, subject: {lang.get('video_subject')}")
+    with (run_dir / 'candidates_scored.csv').open(encoding='utf-8-sig') as f:
+        rows = list(csv.DictReader(f))
+    units = [u['unit_id'] for u in doc['units']]
+    per_gen = {}
+    for r in rows:
+        per_gen.setdefault(r['cand_id'].split(':')[0], set()).add(r['unit_id'])
+    gaps = {g: sorted(set(units) - per_gen.get(g, set())) for g in man['generators']}
+    check('06_three_generators', len(man['generators']) >= 3 and not any(gaps.values()),
+          {'generators': man['generators'], 'units_without_candidate': {g: u for g, u in gaps.items() if u}})
+    check('07_quality_gate', rows and all(r['qe'] not in ('', None) for r in rows),
+          {'candidates': len(rows), 'quality': st.get('quality')})
+    role_tags = tuple(f'{kind}:{role}' for kind in ('stopped', 'invalid_output') for role in ('refine', 'rank', 'polish'))
+    roles = [r for r in st.get('reasons', []) if r.startswith(role_tags)]
+    check('08_refine_rank_polish', not roles,
+          {'accepted_after_refine': met.get('accepted_after_refine'), 'rank_changed_choice': met.get('rank_changed_choice'),
+           'polished_units': sum(bool(u.get('polished_from')) for u in doc['units']), 'problems': roles})
+    try:
+        validate_final(doc)
+        check('09_translation_final_schema', True, doc.get('schema_version'))
+    except Exception as exc:                          # noqa: BLE001 - reported, not raised
+        check('09_translation_final_schema', False, str(exc)[:300])
+    order = [s['unit_id'] for u in doc['units'] for s in u['source_units']]
+    readiness = doc.get('source_readiness') or {}
+    check('10_source_ids_and_timings', order == list(expected_units),
+          {'order': order, 'merged': {u['unit_id']: u['merged_from'] for u in doc['units'] if u.get('merged_from')},
+           'readiness': readiness})
+    snap = run_dir / 'course_memory_snapshot.json'
+    snap_ok = snap.exists() and hashlib.sha256(snap.read_bytes()).hexdigest() == lang.get('course_memory_snapshot_sha256')
+    commit_ok = expected_commit is None or man.get('git_commit') == expected_commit
+    work = run_dir.parent.parent
+    failures = sorted(str(p.relative_to(work)) for p in (work / 'cache').rglob('*.failure.json'))
+    mem_state = None
+    if course_memory and Path(course_memory).exists():
+        mem = json.loads(Path(course_memory).read_text(encoding='utf-8'))
+        mem_state = {'revision': mem.get('revision'), 'videos': sorted(mem.get('videos', {})),
+                     'terms': len(mem.get('terms', {})), 'conflicts': len(mem.get('conflicts', []))}
+    check('11_manifest_memory_cache', snap_ok and commit_ok and (work / 'cache' / 'candidates').exists(),
+          {'git_commit': man.get('git_commit'), 'expected_commit': expected_commit, 'snapshot_hash_ok': snap_ok,
+           'memory_update': lang.get('course_memory_update'), 'memory': mem_state, 'failure_ledgers': failures})
+    out['infrastructure'] = {'ok': st.get('infrastructure') == 'complete', 'detail': st.get('reasons')}
+    (run_dir.parent / f'{run_dir.name}__smoke_check.json').write_text(
+        json.dumps(out, ensure_ascii=False, indent=1, default=str), encoding='utf-8')
+    return out
+
+
+def replay_check(first_run, replay_run):
+    """The replay (same snapshot, same caches, request cap 0) must call no model and give the same lines."""
+    a, b = Path(first_run), Path(replay_run)
+    da = json.loads((a / 'translation_final.json').read_text(encoding='utf-8'))
+    db = json.loads((b / 'translation_final.json').read_text(encoding='utf-8'))
+    ma = json.loads((a / 'manifest.json').read_text(encoding='utf-8'))
+    mb = json.loads((b / 'manifest.json').read_text(encoding='utf-8'))
+    keys = ('unit_id', 'status', 'natural_ar', 'accurate_ar', 'tts_text', 'start', 'end', 'source_units')
+    diff = [ua['unit_id'] for ua, ub in zip(da['units'], db['units']) if any(ua.get(k) != ub.get(k) for k in keys)]
+    calls = (mb.get('status') or {}).get('model_calls') or {}
+    out = {'same_units': len(da['units']) == len(db['units']) and not diff, 'different_units': diff,
+           'generator_calls_in_replay': calls, 'no_generator_calls': not any(calls.values()),
+           'replay_complete': (mb.get('status') or {}).get('infrastructure') == 'complete',
+           'same_snapshot': (ma.get('language') or {}).get('course_memory_snapshot_sha256')
+           == (mb.get('language') or {}).get('course_memory_snapshot_sha256'),
+           'same_prepared_tasks': ma.get('prepared_tasks_sha256') == mb.get('prepared_tasks_sha256')}
+    out['ok'] = all(out[k] for k in ('same_units', 'no_generator_calls', 'replay_complete', 'same_snapshot',
+                                     'same_prepared_tasks'))
+    (b.parent / f'{b.name}__replay_check.json').write_text(json.dumps(out, ensure_ascii=False, indent=1),
+                                                          encoding='utf-8')
+    return out
