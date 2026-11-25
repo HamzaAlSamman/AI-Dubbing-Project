@@ -313,5 +313,146 @@ class SafeMergeTests(unittest.TestCase):
         self.assertIn('pause', suspects[0]['reason'])
 
 
+
+# ---------------------------------------------------------------- P0-4 course terminology memory
+class _Agent:
+    """Fake terminology agent: returns the terms given for each call, records the prior it received."""
+    provider, model = 'fake', 'terminology'
+
+    def __init__(self, *replies):
+        self.replies, self.priors, self.calls = list(replies), [], 0
+
+    def chat_json(self, system, user):
+        self.calls += 1
+        self.priors.append(json.loads(user).get('approved_terms_from_earlier_videos'))
+        return {'subject': 'course', 'terms': self.replies.pop(0) if self.replies else []}
+
+
+class CourseMemoryV2Tests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from dubbing_translation.io import V2_CONFIG, load_config
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.mem = self.root / 'course' / 'glossary.json'
+        self.cfg = load_config(V2_CONFIG)
+        self.cfg['polish']['enabled'] = False
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _run(self, video, agent, *, gens=None, text='y is the label of this image', snapshot=None, label=''):
+        from dubbing_translation.pipeline import run
+        from dubbing_translation.timing import Window
+        from test_translation_step import FakeQE, FakeSpeller, FixedGen, arabic_of
+        n = int(3.0 * self.cfg['voice']['letters_per_second'])
+        tasks = [{'unit_id': 'u0', 'source_text': text, 'context_before': [], 'context_after': [],
+                  'source_duration_s': 3.0}]
+        gens = gens or [FixedGen('mt', {'u0': 'الوسم ' + arabic_of(n - 5)})]
+        return run(tasks, {'u0': Window('u0', 3.0, 3.0)}, self.cfg, self.root / video / 'translation_step',
+                   generators=gens, qe=FakeQE(), speller=FakeSpeller(), refine_client=agent, log=lambda *_: None,
+                   course_memory=self.mem if snapshot is None else None, course_memory_snapshot=snapshot,
+                   video_id=video, run_label=label)
+
+    def _data(self):
+        return json.loads(self.mem.read_text(encoding='utf-8'))
+
+    def test_proposed_term_is_a_suggestion_not_a_rejection(self):
+        _, final, metrics = self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        self.assertEqual(final[0]['status'], 'accepted')               # 'الوسم' is not rejected
+        self.assertIn('label', final[0]['language']['terms'])           # but reported
+        self.assertEqual(self._data()['terms']['label']['status'], 'proposed')
+
+    def test_degraded_or_failed_run_does_not_change_the_memory(self):
+        from dubbing_translation.generators import TransientLLMError
+
+        class Down:
+            uses_budget, name = False, 'down'
+
+            def generate(self, task, budget):
+                raise TransientLLMError('503')
+
+        _, _, metrics = self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]), gens=[Down()])
+        self.assertTrue(metrics['degraded'])
+        self.assertFalse(self.mem.exists())
+
+    def test_rerunning_a_video_is_recorded_once(self):
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]), label='again')
+        d = self._data()
+        self.assertEqual(list(d['videos']), ['v1'])
+        self.assertEqual(d['terms']['label']['renderings']['تسمية']['videos'], ['v1'])
+        self.assertEqual(d['terms']['label']['status'], 'proposed')     # one video is not a verification
+
+    def test_independent_agreement_verifies_and_is_then_enforced(self):
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        a2 = _Agent([{'en': ['label'], 'ar': 'تسمية'}])
+        self._run('v2', a2)
+        self.assertIsNone(a2.priors[0])                                  # proposed terms are not shown: independent
+        self.assertEqual(self._data()['terms']['label']['status'], 'auto_verified')
+        _, final, _ = self._run('v3', _Agent([]))
+        self.assertEqual(final[0]['status'], 'needs_review')            # 'الوسم' now rejected: verified term
+        self.assertIn('term:label', final[0]['reasons'])
+
+    def test_conflict_is_recorded_and_never_enforced(self):
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        self._run('v2', _Agent([{'en': ['label'], 'ar': 'وسم'}]))
+        d = self._data()
+        self.assertEqual(d['terms']['label']['status'], 'conflicting')
+        self.assertEqual(sorted(d['terms']['label']['renderings']), ['تسمية', 'وسم'])
+        self.assertTrue(any(c['term'] == 'label' for c in d['conflicts']))
+        _, final, _ = self._run('v3', _Agent([]))
+        self.assertNotIn('term:label', final[0]['reasons'])
+
+    def test_success_never_promotes_to_approved_but_a_person_can(self):
+        from dubbing_translation.language import CourseMemory
+        for v in ('v1', 'v2', 'v3'):
+            self._run(v, _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        self.assertEqual(self._data()['terms']['label']['status'], 'auto_verified')
+        CourseMemory(self.mem).set_status('label', 'approved', rendering='تسمية', by='reviewer')
+        self._run('v4', _Agent([{'en': ['label'], 'ar': 'وسم'}]))
+        d = self._data()
+        self.assertEqual(d['terms']['label']['status'], 'approved')      # a human decision is kept
+        self.assertTrue(any(c['term'] == 'label' for c in d['conflicts']))
+
+    def test_term_keeps_source_context_and_version(self):
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        src = self._data()['terms']['label']['renderings']['تسمية']['sources'][0]
+        self.assertEqual(src['video'], 'v1')
+        self.assertEqual(src['units'], ['u0'])
+        self.assertIn('label', src['context'])
+        self.assertTrue(src['glossary_version'].startswith('glossary_auto'))
+
+    def test_snapshot_is_saved_and_replays_the_same_prior_without_writing(self):
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        self._run('v2', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        a3 = _Agent([])
+        run_dir, _, _ = self._run('v3', a3)
+        manifest = json.loads((run_dir / 'manifest.json').read_text(encoding='utf-8'))
+        snap = run_dir / 'course_memory_snapshot.json'
+        self.assertTrue(snap.exists())
+        self.assertEqual(manifest['language']['course_memory_snapshot_sha256'],
+                         __import__('hashlib').sha256(snap.read_bytes()).hexdigest())
+        self.assertEqual(a3.priors[0], [{'en': ['label'], 'ar': 'تسمية'}])  # verified term given to the agent
+        before = self.mem.read_bytes()
+        a4 = _Agent([])
+        replay_dir, _, _ = self._run('v3', a4, snapshot=snap, label='replay')
+        # same prior -> same glossary cache key -> the agent is not called again, same glossary
+        self.assertEqual(a4.calls, 0)
+        self.assertEqual((replay_dir / 'glossary.json').read_text(encoding='utf-8'),
+                         (run_dir / 'glossary.json').read_text(encoding='utf-8'))
+        self.assertEqual(self.mem.read_bytes(), before)                 # replay does not write
+
+    def test_interleaved_writers_keep_both_contributions(self):
+        from dubbing_translation.language import CourseMemory
+        m1, m2 = CourseMemory(self.mem), CourseMemory(self.mem)       # both loaded before either writes
+        m1.record_video('v1', [{'en': ['label'], 'ar': 'تسمية'}], meta={'glossary_version': 'g'})
+        m2.record_video('v2', [{'en': ['matrix'], 'ar': 'مصفوفة'}], meta={'glossary_version': 'g'})
+        d = self._data()
+        self.assertEqual(sorted(d['videos']), ['v1', 'v2'])
+        self.assertEqual(sorted(d['terms']), ['label', 'matrix'])
+        self.assertFalse(self.mem.with_suffix('.lock').exists())
+
+
 if __name__ == '__main__':
     unittest.main()

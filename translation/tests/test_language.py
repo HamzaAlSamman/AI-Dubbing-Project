@@ -97,7 +97,9 @@ class GlossaryTests(unittest.TestCase):
 
 
 class CourseMemoryTests(unittest.TestCase):
-    def test_terms_stay_the_same_across_videos(self):
+    def test_verified_course_terms_reach_the_agent_and_win(self):
+        """(Rewritten for course memory v2: only verified terms are given to the agent and win; the
+        detailed memory behaviour is in test_phase0.CourseMemoryV2Tests.)"""
         from dubbing_translation.language import CourseMemory
 
         class Agent:
@@ -112,20 +114,17 @@ class CourseMemoryTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             mem_path = Path(tmp) / 'course' / 'glossary.json'
-            v1 = Agent([{'en': ['label'], 'ar': 'تسمية'}])
-            g1, path1, _ = build_glossary([{'unit_id': 'a', 'source_text': 'the label'}], v1, Path(tmp) / 'v1',
-                                          prior_terms=CourseMemory(mem_path).terms, log=lambda *_: None)
-            CourseMemory(mem_path).update(json.loads(path1.read_text(encoding='utf-8'))['terms'], 'video1')
-            # video 2: the agent proposes another rendering for 'label' and a new term
-            v2 = Agent([{'en': ['label'], 'ar': 'وسم'}, {'en': ['matrix'], 'ar': 'مصفوفة'}])
+            for v in ('video1', 'video2'):                           # two independent proposals -> verified
+                CourseMemory(mem_path).record_video(v, [{'en': ['label'], 'ar': 'تسمية'}],
+                                                    meta={'glossary_version': 'g'})
             mem = CourseMemory(mem_path)
-            g2, path2, _ = build_glossary([{'unit_id': 'b', 'source_text': 'the label of the matrix'}], v2,
-                                          Path(tmp) / 'v2', prior_terms=mem.terms, log=lambda *_: None)
-            self.assertEqual(v2.payloads[0]['approved_terms_from_earlier_videos'], [{'en': ['label'], 'ar': 'تسمية'}])
-            self.assertEqual({t['id']: t['ar'] for t in g2.terms}, {'label': 'تسمية', 'matrix': 'مصفوفة'})
-            added = mem.update(json.loads(path2.read_text(encoding='utf-8'))['terms'], 'video2')
-            self.assertEqual(added, 1)
-            self.assertEqual([t['ar'] for t in CourseMemory(mem_path).terms], ['تسمية', 'مصفوفة'])
+            v3 = Agent([{'en': ['label'], 'ar': 'وسم'}, {'en': ['matrix'], 'ar': 'مصفوفة'}])
+            g3, _, _ = build_glossary([{'unit_id': 'b', 'source_text': 'the label of the matrix'}], v3,
+                                      Path(tmp) / 'v3', prior_terms=mem.terms, log=lambda *_: None)
+            self.assertEqual(v3.payloads[0]['approved_terms_from_earlier_videos'], [{'en': ['label'], 'ar': 'تسمية'}])
+            by_id = {t['id']: t for t in g3.terms}
+            self.assertEqual((by_id['label']['ar'], by_id['label']['status']), ('تسمية', 'auto_verified'))
+            self.assertEqual((by_id['matrix']['ar'], by_id['matrix']['status']), ('مصفوفة', 'proposed'))
             self.assertEqual(len(list((mem_path.parent / 'history').glob('*.json'))), 2)
 
     def test_prompt_block_has_subject_and_speaker(self):
@@ -138,11 +137,15 @@ class CourseMemoryTests(unittest.TestCase):
 
 class GateTests(unittest.TestCase):
     def test_language_reasons(self):
-        lang = Language(POLICY, Glossary.from_terms(TERMS, 'test'))
+        lang = Language(POLICY, Glossary.from_terms(TERMS, 'test', status='approved'))
         w = Window('u', 3.0, 3.0)
         kw = dict(qe=1.0, misspelled_words=set(), cfg=CFG2, language=lang)
         bad = evaluate('y هو الوسم يا صاحبي شو', 'y, the label', w, **kw)
-        self.assertIn('term:label', bad['reasons'])
+        self.assertIn('term:label', bad['reasons'])                         # approved term: enforced
+        proposed = Language(POLICY, Glossary.from_terms(TERMS, 'test'))      # proposed: a suggestion only
+        soft = evaluate('y هو الوسم', 'y, the label', w, qe=1.0, misspelled_words=set(), cfg=CFG2, language=proposed)
+        self.assertNotIn('term:label', soft['reasons'])
+        self.assertIn('label', soft['language']['terms'])
         self.assertIn('dialect:شو', bad['reasons'])
         stiff = evaluate('يقوم الحاسوب بتخزين التسمية', 'the computer stores the label', w, **kw)
         self.assertNotIn('term:label', stiff['reasons'])
@@ -176,12 +179,12 @@ class V2PipelineTests(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
-    def test_glossary_rejects_wrong_term_and_polish_removes_stiff_pattern(self):
+    def test_proposed_term_is_reported_and_polish_removes_stiff_pattern(self):
         n = int(3.0 * RATE)
-        wrong = 'الوسم ' + arabic_of(n - 5)                                   # misses the approved term
-        stiff = 'يقوم بتحديد التسمية ' + arabic_of(n - 16)                 # approved term, stiff pattern
+        wrong = 'الوسم ' + arabic_of(n - 5)                                   # misses the proposed term
+        stiff = 'يقوم بتحديد التسمية ' + arabic_of(n - 16)                 # proposed term, stiff pattern
         polished = 'يحدد التسمية ' + arabic_of(n - 11)
-        qe = FakeQE({wrong: 0.5, stiff: 1.5, polished: 1.6})
+        qe = FakeQE({wrong: 2.0, stiff: 1.5, polished: 1.6})
 
         class Client(GlossaryClient):
             def chat_json(self, system, user):
@@ -197,15 +200,16 @@ class V2PipelineTests(unittest.TestCase):
                                       course_memory=self.work / 'course' / 'glossary.json', video_id='lesson1')
         f = final[0]
         self.assertEqual(f['status'], 'accepted')
-        self.assertEqual(f['natural_ar'], polished)                  # wrong term rejected, stiff line polished
+        self.assertEqual(f['natural_ar'], polished)                  # best line (stiff) chosen, then polished
         self.assertEqual(f['polished_from'], 'llm:v')
         self.assertEqual(metrics['polished_units'], 1)
         self.assertEqual(metrics['units_term_missing'], 0)
-        self.assertEqual(f['accurate_ar'], wrong)                    # plain MT line kept as the accurate version
+        self.assertEqual(f['accurate_ar'], stiff)                    # best-QE plain MT line (P2-4: selection rule not yet changed)
         manifest = json.loads((run_dir / 'manifest.json').read_text(encoding='utf-8'))
         self.assertEqual(manifest['language']['glossary_terms'], 4)     # 3 of the video + 1 generic (lowercase)
         self.assertTrue((run_dir / 'glossary.json').exists())
-        self.assertEqual(manifest['language']['course_memory_terms'], 3)
+        self.assertEqual(manifest['language']['course_memory_terms'], 0)   # no verified course term yet
+        self.assertEqual(manifest['language']['course_memory_update']['terms'], 3)
         self.assertEqual(manifest['language']['video_subject'], 'logistic regression notation')
 
 

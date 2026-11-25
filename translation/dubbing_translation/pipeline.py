@@ -30,7 +30,7 @@ from .generators import PermanentLLMError, QuotaExhausted, TransientLLMError
 
 # an LLM role (glossary, refine, rank, polish) that fails is stopped for the run; the run is degraded
 LLM_STOP = (QuotaExhausted, TransientLLMError, PermanentLLMError)
-from .language import CourseMemory, Language, build_glossary
+from .language import CourseMemory, Glossary, Language, build_glossary, term_contexts
 from .segment import prepare_sources
 from .prompts import (POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM, RANK_V2_VERSION, RANK_VERSION,
                       REFINE_SYSTEM, REFINE_V3_SYSTEM, REFINE_V3_VERSION, REFINE_VERSION, describe_issues)
@@ -322,40 +322,55 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
 
 # ------------------------------------------------------------------ 4. run
 def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client=None, rank_client=None,
-        glossary_client=None, course_memory=None, video_id=None, repo_dir=None, run_label='', environment=None,
-        log=print):
+        glossary_client=None, course_memory=None, course_memory_snapshot=None, video_id=None, repo_dir=None,
+        run_label='', environment=None, log=print):
     """glossary_client: LLM that builds the glossary of the video when [language] glossary = "auto..."
     (defaults to the refine client).
-    course_memory: path of the course's terminology memory (JSON shared by all videos of a course);
-    the video's glossary reuses its terms and adds the new ones to it. video_id names this video there."""
+    course_memory: path of the course's terminology memory (JSON shared by all videos of a course). The run
+    uses a snapshot of its verified terms (saved in the run folder, hash in the manifest) and records this
+    video's proposals only after a complete, non-degraded run. video_id names this video there.
+    course_memory_snapshot: a saved snapshot file; replays exactly that prior and writes no memory."""
     work_dir = Path(work_dir)
     tasks, windows, source_prep = prepare_sources(tasks, windows, cfg)     # V2: ASR fragments / spelled digits
     auto_glossary, glossary_path, subject = None, None, None
     stopped, gen_report = {}, {}
     memory = CourseMemory(course_memory) if course_memory else None
+    snapshot = None
+    if course_memory_snapshot:
+        snapshot = read_json(course_memory_snapshot)                   # replay: read-only
+        memory = None
+    elif memory is not None:
+        snapshot = memory.snapshot()
     lc = cfg.get('language') or {}
     if str(lc.get('glossary', '')).startswith('auto'):
         builder = glossary_client or refine_client
         if builder is not None:
             try:
                 auto_glossary, glossary_path, subject = build_glossary(
-                    tasks, builder, work_dir / 'cache', prior_terms=memory.terms if memory else (), log=log)
+                    tasks, builder, work_dir / 'cache', prior_terms=snapshot['verified'] if snapshot else (),
+                    log=log)
             except LLM_STOP as exc:
                 stopped['glossary'] = str(exc)[:200]
                 log(f'[glossary] service stopped, no automatic glossary this run: {str(exc)[:120]}')
         else:
             log('[glossary] no LLM client: the automatic glossary is skipped')
-        if auto_glossary is None and memory is not None:
-            auto_glossary = memory.glossary()                 # at least the course's earlier decisions
+        if auto_glossary is None and snapshot and snapshot['verified']:
+            auto_glossary = Glossary.from_terms(snapshot['verified'], 'course_memory')   # earlier decisions
     language = Language.from_config(cfg, auto_glossary=auto_glossary)
     if language is not None:
         language.subject = subject
-    if memory is not None and glossary_path is not None:
-        added = memory.update(read_json(glossary_path)['terms'], video_id or work_dir.parent.name, subject)
-        log(f'[glossary] course memory {memory.path}: +{added} terms, {len(memory.terms)} in total')
     cfg_hash = sha256_json(cfg)
     run_id = f'tr_{now_stamp()}_{cfg_hash[:8]}' + (f'_{run_label}' if run_label else '')
     run_dir = work_dir / 'runs' / run_id
+    snapshot_sha = None
+    if snapshot is not None:                     # the exact memory this run used, for replay
+        import hashlib
+        body = json.dumps(snapshot, ensure_ascii=False, indent=1, sort_keys=True).encode('utf-8')
+        snapshot_sha = hashlib.sha256(body).hexdigest()
+        snap_path = run_dir / 'course_memory_snapshot.json'
+        snap_path.parent.mkdir(parents=True, exist_ok=True)
+        if not snap_path.exists():
+            snap_path.write_bytes(body)
     tasks_hash = sha256_json([{k: t[k] for k in ('unit_id', 'source_text')} for t in tasks])
     manifest = {'run_id': run_id, 'created_at': now_iso(), 'package_version': __version__,
                 'git_commit': git_commit(repo_dir) if repo_dir else None, 'config': cfg, 'config_sha256': cfg_hash,
@@ -372,7 +387,9 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                     'glossary_file': str(glossary_path) if glossary_path else None,
                     'video_subject': subject,
                     'course_memory': str(memory.path) if memory else None,
-                    'course_memory_terms': len(memory.terms) if memory else None}}
+                    'course_memory_snapshot_sha256': snapshot_sha,
+                    'course_memory_revision': snapshot.get('revision') if snapshot else None,
+                    'course_memory_terms': len(snapshot['verified']) if snapshot else None}}
     write_json_once(run_dir / 'run_started.json', manifest)       # the complete manifest is written at the end
     if language is not None and language.glossary is not None:
         write_json_once(run_dir / 'glossary.json', language.glossary.as_dict())
@@ -477,6 +494,19 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
     metrics.update({'degraded': status['degraded'], 'degraded_reasons': status['reasons'],
                     'deferred_units': status['deferred_units'], 'error_units': status['error_units']})
     manifest['status'] = status
+    if memory is not None and glossary_path is not None:
+        if status['degraded']:
+            log('[glossary] run degraded: the course memory is NOT updated')
+            manifest['language']['course_memory_update'] = 'skipped: degraded run'
+        else:
+            proposed = read_json(glossary_path)['terms']
+            upd = memory.record_video(video_id or work_dir.parent.name, proposed,
+                                      contexts=term_contexts(proposed, tasks),
+                                      meta={'glossary_version': read_json(glossary_path)['version'],
+                                            'builder': read_json(glossary_path).get('builder'),
+                                            'run_id': run_id, 'subject': subject})
+            manifest['language']['course_memory_update'] = upd
+            log(f'[glossary] course memory {memory.path}: {upd}')
     metrics['rank_changed_choice'] = rank_changed
     metrics['llm_calls_rank'] = getattr(rank_client, 'calls', 0) if rank_client else 0
     write_json_once(run_dir / 'manifest.json', manifest)

@@ -64,7 +64,11 @@ llm_timeout_s = 180
 # glossary = "glossaries/x.toml"    : a fixed, reviewed file only
 policy = "language/msa_simple_v1.toml"
 glossary = "auto"
-terminology = "reject"       # reject | flag | off : approved term missing in a candidate
+terminology = "reject"       # reject | flag | off : a VERIFIED term missing in a candidate
+# Only these term statuses can reject a candidate. 'proposed' (one agent run) and 'conflicting' terms are
+# suggestions for the prompts and findings in the report. 'auto_verified' = the same rendering proposed
+# independently by two or more videos of the course; 'approved' = set by a person (optional review).
+reject_statuses = ["approved", "auto_verified"]
 dialect = "reject"
 calques = "flag"             # stiff patterns: flagged, then removed by the guarded polish step
 simplicity = "flag"          # long sentences, rare words, mixed address: flagged, then polished
