@@ -14,7 +14,7 @@ import re
 import time
 from pathlib import Path
 
-from .prompts import ISOMETRIC_SYSTEM, ISOMETRIC_V2_SYSTEM, ISOMETRIC_V2_VERSION, ISOMETRIC_VERSION
+from .prompts import ISOMETRIC_SYSTEM, ISOMETRIC_V2_SYSTEM, ISOMETRIC_V2_VERSION, ISOMETRIC_VERSION, prompt_sha
 
 
 class TransientLLMError(RuntimeError):
@@ -146,9 +146,18 @@ class IsometricLLM:
         """language_aware: V2 prompt that also receives the style rules and the glossary lines of the
         unit (task['language_block'], set by the pipeline when the run has a [language] section)."""
         self.client, self.language_aware = client, language_aware
-        version = ISOMETRIC_V2_VERSION if language_aware else ISOMETRIC_VERSION
+        self.version = ISOMETRIC_V2_VERSION if language_aware else ISOMETRIC_VERSION
         self.system = ISOMETRIC_V2_SYSTEM if language_aware else ISOMETRIC_SYSTEM
-        self.name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{version}'
+        self.prompt_sha = prompt_sha(self.system)
+        self.name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{self.version}'
+        if language_aware:                                   # V2: the prompt text itself is in the cache path
+            self.name += f'__p{self.prompt_sha[:8]}'
+
+    def describe(self):
+        return {'name': self.name, 'kind': 'llm', 'provider': self.client.provider, 'model': self.client.model,
+                'prompt_version': self.version, 'prompt_sha': self.prompt_sha,
+                'decoding': {'temperature': getattr(self.client, 'temperature', None),
+                             'thinking_budget': getattr(self.client, 'thinking_budget', None)}}
 
     def generate(self, task, budget):
         payload = {'context_before': task.get('context_before') or [],
@@ -176,8 +185,16 @@ class HyMT:
     def __init__(self, model_id='tencent/HY-MT1.5-7B', load_in_4bit=True, *, language_aware=False):
         """language_aware: when the unit has glossary terms (task['term_pairs']), use the terminology template."""
         self.model_id, self.load_in_4bit, self.language_aware = model_id, load_in_4bit, language_aware
+        self.prompt_sha = prompt_sha(self.PROMPT + ('\n' + self.TERMS_PROMPT if language_aware else ''))
         self.name = model_id.replace('/', '_') + ('__terms_v1' if language_aware else '__plain_v1')
+        if language_aware:
+            self.name += f'__p{self.prompt_sha[:8]}'
         self._tok = self._model = None
+
+    def describe(self):
+        return {'name': self.name, 'kind': 'hf', 'model': self.model_id, 'load_in_4bit': self.load_in_4bit,
+                'prompt_version': 'terms_v1' if self.language_aware else 'plain_v1', 'prompt_sha': self.prompt_sha,
+                'decoding': {'do_sample': False, 'repetition_penalty': 1.05, 'max_new_tokens': 512}}
 
     def prompt(self, task):
         pairs = (task.get('term_pairs') or []) if self.language_aware else []
@@ -260,9 +277,18 @@ class HFChatMT:
         self.load_in_4bit, self.seed, self.compute_dtype = load_in_4bit, seed, compute_dtype
         self.sampling = sampling or {'temperature': 0.7, 'top_p': 0.6, 'top_k': 20, 'repetition_penalty': 1.05}
         self.language_aware = template.endswith('_terms')
+        self.prompt_sha = prompt_sha(self.TEMPLATES[template] + json.dumps(self.sampling, sort_keys=True))
         self.name = f'{model_id.replace("/", "_")}__{template}_g1s{samples}' + (
             '' if compute_dtype == 'float16' else f'_{compute_dtype}')
+        if self.language_aware:
+            self.name += f'__p{self.prompt_sha[:8]}'
+
         self._tok = self._model = None
+
+    def describe(self):
+        return {'name': self.name, 'kind': 'hf', 'model': self.model_id, 'load_in_4bit': self.load_in_4bit,
+                'compute_dtype': self.compute_dtype, 'prompt_version': self.template, 'prompt_sha': self.prompt_sha,
+                'decoding': {'greedy': True, 'samples': self.samples, 'sampling': self.sampling, 'seed': self.seed}}
 
     def _load(self):
         import torch

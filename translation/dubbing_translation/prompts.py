@@ -1,5 +1,14 @@
 """Prompts. Versioned: changing a prompt means a new version string, so cached outputs of the
-old prompt are never mixed with the new one (the version is part of every artifact path)."""
+old prompt are never mixed with the new one (the version is part of every artifact path).
+
+Enforced: PROMPT_REGISTRY maps every version to its text; tests compare prompt_sha(text) with the frozen
+hashes in configs/prompt_hashes.json, and V2 cache keys / generator names include the hash itself."""
+import hashlib
+
+
+def prompt_sha(text):
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()[:16]
+
 
 ISOMETRIC_VERSION = 'isometric_v1'
 ISOMETRIC_SYSTEM = (
@@ -151,3 +160,14 @@ GLOSSARY_SYSTEM = (
     'Return only JSON: {"subject": "...", "terms": [{"en": ["label", "labels"], "ar": "تسمية", '
     '"ar_forms": ["التسميات"], "avoid": ["الوسم"], "why": "short reason"}]}'
 )
+
+
+# version -> exact text (generator templates are registered in generators.py)
+PROMPT_REGISTRY = {
+    ISOMETRIC_VERSION: ISOMETRIC_SYSTEM, ISOMETRIC_V2_VERSION: ISOMETRIC_V2_SYSTEM,
+    REFINE_VERSION: REFINE_SYSTEM, REFINE_V3_VERSION: REFINE_V3_SYSTEM,
+    RANK_VERSION: RANK_SYSTEM, RANK_V2_VERSION: RANK_V2_SYSTEM,
+    POLISH_VERSION: POLISH_SYSTEM, GLOSSARY_VERSION: GLOSSARY_SYSTEM,
+}
+# versions whose cache keys predate the prompt hash (kept as they are so V1 results reproduce)
+LEGACY_KEY_VERSIONS = {ISOMETRIC_VERSION, REFINE_VERSION, RANK_VERSION}

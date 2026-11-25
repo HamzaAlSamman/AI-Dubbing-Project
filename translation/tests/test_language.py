@@ -161,7 +161,7 @@ class GeneratorPromptTests(unittest.TestCase):
         task = {'source_text': 'y, the label', 'term_pairs': [('label', 'تسمية')]}
         self.assertIn('label 翻译成 تسمية', HyMT(language_aware=True).prompt(task))
         self.assertTrue(HyMT().prompt(task).startswith('Translate the following segment into Arabic'))
-        self.assertTrue(HyMT(language_aware=True).name.endswith('__terms_v1'))
+        self.assertIn('__terms_v1__p', HyMT(language_aware=True).name)       # V2 name carries the prompt hash
 
     def test_hy_mt2_terms_template_is_language_aware(self):
         self.assertTrue(HFChatMT('tencent/Hy-MT2-7B', 'hy_mt2_terms').language_aware)

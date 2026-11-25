@@ -32,8 +32,9 @@ from .generators import PermanentLLMError, QuotaExhausted, TransientLLMError
 LLM_STOP = (QuotaExhausted, TransientLLMError, PermanentLLMError)
 from .language import CourseMemory, Glossary, Language, build_glossary, term_contexts
 from .segment import prepare_sources
-from .prompts import (POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM, RANK_V2_VERSION, RANK_VERSION,
-                      REFINE_SYSTEM, REFINE_V3_SYSTEM, REFINE_V3_VERSION, REFINE_VERSION, describe_issues)
+from .prompts import (LEGACY_KEY_VERSIONS, POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM,
+                      RANK_V2_VERSION, RANK_VERSION, REFINE_SYSTEM, REFINE_V3_SYSTEM, REFINE_V3_VERSION,
+                      REFINE_VERSION, describe_issues, prompt_sha)
 from .text import ar_tokens, clean_translation, tts_text
 from .timing import letter_budget
 
@@ -109,6 +110,8 @@ def generate_candidates(tasks, windows, generators, cfg, work_dir, log=print, la
             consecutive = 0
             write_json_once(path, {'unit_id': t['unit_id'], 'generator': gen.name, 'budget': budget,
                                    'items': items, 'status': 'ok' if items else 'empty',
+                                   'prompt_sha': getattr(gen, 'prompt_sha', None),
+                                   'generator_info': gen.describe() if hasattr(gen, 'describe') else None,
                                    'created_at': now_iso()})
             if i % 10 == 0 or i == len(todo):
                 log(f'  {gen.name}: {i}/{len(todo)}')
@@ -119,9 +122,12 @@ def generate_candidates(tasks, windows, generators, cfg, work_dir, log=print, la
 
 def load_candidates(tasks, windows, generators, cfg, work_dir, language=None, report=None):
     """{unit_id: [{'cand_id','generator','variant','text','raw_text'}]}; identical texts merged.
-    `report['errors']` collects units whose cached record is a refused request ('error')."""
+    `report['errors']` collects units whose cached record is a refused request ('error').
+    A record written with another prompt text than the generator's current one is stale: not used,
+    listed in `report['stale']`. Records without a prompt hash (V1 caches) are used and counted 'legacy'."""
     out = {}
-    errors = report.setdefault('errors', {}) if report is not None else {}
+    report = report if report is not None else {}
+    errors, stale, legacy = report.setdefault('errors', {}), report.setdefault('stale', {}), report.setdefault('legacy', {})
     for t in tasks:
         budget = _budget(windows[t['unit_id']], cfg)
         seen, cands = {}, []
@@ -130,6 +136,12 @@ def load_candidates(tasks, windows, generators, cfg, work_dir, language=None, re
             if not path.exists():
                 continue
             rec = read_json(path)
+            current = getattr(gen, 'prompt_sha', None)
+            if rec.get('prompt_sha') and current and rec['prompt_sha'] != current:
+                stale.setdefault(gen.name, []).append(t['unit_id'])
+                continue
+            if not rec.get('prompt_sha'):
+                legacy[gen.name] = legacy.get(gen.name, 0) + 1
             if rec.get('status') == 'error' and t['unit_id'] not in errors.get(gen.name, []):
                 errors.setdefault(gen.name, []).append(t['unit_id'])
             for item in rec['items']:
@@ -196,7 +208,8 @@ def refine_unit(task, window, cands, cfg, client, qe, misspelled_fn, allow, work
         payload.update(language.prompt_block(task['source_text'], task))
         system, version = REFINE_V3_SYSTEM, REFINE_V3_VERSION
     name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{version}'
-    path = Path(work_dir) / 'cache' / 'refine' / name / f'{task["unit_id"]}__{sha256_json([payload, rcfg])[:10]}.json'
+    key = [payload, rcfg] if version in LEGACY_KEY_VERSIONS else [payload, rcfg, prompt_sha(system)]
+    path = Path(work_dir) / 'cache' / 'refine' / name / f'{task["unit_id"]}__{sha256_json(key)[:10]}.json'
     if path.exists():
         rec = read_json(path)
     else:
@@ -251,7 +264,8 @@ def rank_unit(task, cands, cfg, client, work_dir, language=None):
         payload.update(language.prompt_block(task['source_text'], task))
         system, version = RANK_V2_SYSTEM, RANK_V2_VERSION
     name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{version}'
-    path = Path(work_dir) / 'cache' / 'rank' / name / f'{task["unit_id"]}__{sha256_json(payload)[:10]}.json'
+    key = payload if version in LEGACY_KEY_VERSIONS else [payload, prompt_sha(system)]
+    path = Path(work_dir) / 'cache' / 'rank' / name / f'{task["unit_id"]}__{sha256_json(key)[:10]}.json'
     if path.exists():
         rec = read_json(path)
     else:
@@ -288,7 +302,8 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
                'problems': language.issue_hints(task['source_text'], found),
                **language.prompt_block(task['source_text'], task)}
     name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{POLISH_VERSION}'
-    path = Path(work_dir) / 'cache' / 'polish' / name / f'{task["unit_id"]}__{sha256_json([payload, pcfg])[:10]}.json'
+    key = [payload, pcfg, prompt_sha(POLISH_SYSTEM)]
+    path = Path(work_dir) / 'cache' / 'polish' / name / f'{task["unit_id"]}__{sha256_json(key)[:10]}.json'
     if path.exists():
         rec = read_json(path)
     else:
@@ -379,6 +394,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                 'tasks_sha256': tasks_hash, 'source_tasks_sha256': source_tasks_hash,
                 'prepared_tasks_sha256': tasks_hash, 'source_units': source_units_count,
                 'units': len(tasks), 'generators': [g.name for g in generators],
+                'generator_details': [g.describe() if hasattr(g, 'describe') else {'name': g.name} for g in generators],
                 'qe_metric': qe.name, 'spell_checker': speller.name,
                 'refiner': None if refine_client is None else f'{refine_client.provider}:{refine_client.model}',
                 'ranker': None if rank_client is None else f'{rank_client.provider}:{rank_client.model}',
@@ -556,6 +572,8 @@ def run_status(stopped, gen_report, cfg, *, language_requested, glossary_built):
     reasons = [f'stopped:{k}: {v[:120]}' for k, v in stopped.items()]
     reasons += [f'deferred:{g}:{len(u)} units' for g, u in deferred.items()]
     reasons += [f'refused:{g}:{len(u)} units' for g, u in errors.items()]
+    stale = {g: u for g, u in (gen_report.get('stale') or {}).items() if u}
+    reasons += [f'stale cache:{g}:{len(u)} units' for g, u in stale.items()]
     lc = cfg.get('language') or {}
     if language_requested and str(lc.get('glossary', '')).startswith('auto') and not glossary_built:
         reasons.append('glossary:not built')

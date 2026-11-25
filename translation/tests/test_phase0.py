@@ -537,5 +537,88 @@ class SourceProvenanceTests(unittest.TestCase):
         self.assertEqual([f['unit_id'] for f in final], ['a+b'])
 
 
+
+# ---------------------------------------------------------------- promoted B: prompt cache integrity
+class PromptCacheIntegrityTests(unittest.TestCase):
+    def test_prompt_texts_match_their_frozen_versions(self):
+        """A prompt text changed without a new version string fails here: bump the version, then add
+        the new hash to configs/prompt_hashes.json (old versions stay, old caches stay valid)."""
+        from dubbing_translation.prompts import PROMPT_REGISTRY, prompt_sha
+        frozen = json.loads((TR / 'configs' / 'prompt_hashes.json').read_text(encoding='utf-8'))
+        for version, text in PROMPT_REGISTRY.items():
+            self.assertIn(version, frozen, f'{version} is not frozen')
+            self.assertEqual(prompt_sha(text), frozen[version], f'{version}: text changed without a new version')
+
+    def test_v2_generator_names_carry_the_prompt_hash(self):
+        from dubbing_translation.generators import HFChatMT, HyMT, IsometricLLM
+        from dubbing_translation.prompts import ISOMETRIC_V2_SYSTEM, prompt_sha
+
+        class C:
+            provider, model = 'gemini', 'm'
+        g = IsometricLLM(C(), language_aware=True)
+        self.assertTrue(g.name.endswith('__p' + prompt_sha(ISOMETRIC_V2_SYSTEM)[:8]))
+        self.assertEqual(IsometricLLM(C()).name, 'gemini__m__isometric_v1')       # V1 name unchanged
+        self.assertIn('__p', HyMT(language_aware=True).name)
+        self.assertEqual(HyMT().name, 'tencent_HY-MT1.5-7B__plain_v1')
+        self.assertIn('__p', HFChatMT('tencent/Hy-MT2-7B', 'hy_mt2_terms').name)
+        self.assertNotIn('__p', HFChatMT('tencent/Hy-MT2-7B', 'hy_mt2').name)
+        info = g.describe()
+        self.assertEqual((info['model'], info['prompt_version']), ('m', 'isometric_v2'))
+
+    def test_cached_candidate_from_another_prompt_is_not_used(self):
+        import tempfile
+        from dubbing_translation.common import write_json_once
+        from dubbing_translation.io import load_config
+        from dubbing_translation.pipeline import _candidate_path, load_candidates
+        from dubbing_translation.timing import Window
+
+        class Gen:
+            uses_budget, name, prompt_sha = False, 'g', 'new'
+
+        cfg = load_config()
+        tasks = [{'unit_id': 'u0', 'source_text': 'x'}]
+        windows = {'u0': Window('u0', 2.0, 2.0)}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = _candidate_path(tmp, Gen(), 'u0', None)
+            write_json_once(path, {'unit_id': 'u0', 'generator': 'g', 'items': [{'text': 'نص قديم', 'variant': 'v'}],
+                                   'prompt_sha': 'old'})
+            report = {}
+            cands = load_candidates(tasks, windows, [Gen()], cfg, tmp, report=report)
+        self.assertEqual(cands['u0'], [])
+        self.assertEqual(report['stale'], {'g': ['u0']})
+
+    def test_rank_cache_key_changes_with_the_prompt_text(self):
+        import tempfile
+        import dubbing_translation.pipeline as P
+        from dubbing_translation.io import V2_CONFIG, load_config
+        from dubbing_translation.language import Language, Policy
+
+        class R:
+            provider, model, calls = 'fake', 'r', 0
+
+            def chat_json(self, system, user):
+                self.calls += 1
+                n = len(json.loads(user)['candidates'])
+                return {'scores': [{'id': i + 1, 'adequacy': 50, 'fluency': 50} for i in range(n)]}
+
+        cfg = load_config(V2_CONFIG)
+        lang = Language(Policy.load('language/msa_simple_v1.toml'))
+        ev = {'qe': 1.0, 'zone': 'fits', 'ratio_slot': 1.0}
+        cands = [{'cand_id': 'a', 'text': 'أ', 'eval': ev}, {'cand_id': 'b', 'text': 'ب', 'eval': ev}]
+        task = {'unit_id': 'u0', 'source_text': 'x'}
+        r = R()
+        with tempfile.TemporaryDirectory() as tmp:
+            P.rank_unit(task, cands, cfg, r, tmp, lang)
+            P.rank_unit(task, cands, cfg, r, tmp, lang)
+            self.assertEqual(r.calls, 1)                                   # cached
+            orig = P.RANK_V2_SYSTEM
+            P.RANK_V2_SYSTEM = orig + ' changed'
+            try:
+                P.rank_unit(task, cands, cfg, r, tmp, lang)
+            finally:
+                P.RANK_V2_SYSTEM = orig
+            self.assertEqual(r.calls, 2)                                   # new prompt text -> new key
+
+
 if __name__ == '__main__':
     unittest.main()
