@@ -31,6 +31,50 @@ class QuotaExhausted(RuntimeError):
     """Daily quota reached: the run stops cleanly; finished units stay cached."""
 
 
+class CallLimitReached(QuotaExhausted):
+    """The run's own cap on LLM requests (CallBudget) is reached: handled like a daily quota."""
+
+
+class AuthenticationError(RuntimeError):
+    """The API key is missing, invalid or not allowed (401/403). Not a property of a unit: never cached;
+    the role stops for the run and its units are deferred until the key is fixed."""
+
+
+class InvalidLLMOutput(RuntimeError):
+    """The model answered, but never with a valid JSON object. Not an (empty) translation result: never
+    cached as one. Recorded in the unit's failure ledger and retried by later runs, a bounded number of times."""
+
+
+class CallBudget:
+    """Shared cap on LLM requests across every client of a run (e.g. the development smoke test)."""
+
+    def __init__(self, limit):
+        self.limit, self.used = (None if limit is None else int(limit)), 0
+
+    def take(self):
+        if self.limit is not None and self.used >= self.limit:
+            raise CallLimitReached(f'LLM request cap reached ({self.limit} requests)')
+        self.used += 1
+
+
+_AUTH_MARKERS = ('401', '403', 'UNAUTHENTICATED', 'PERMISSION_DENIED', 'API_KEY_INVALID', 'API key not valid',
+                 'API key expired', 'API_KEY_SERVICE_BLOCKED')
+_TRANSIENT_MARKERS = ('429', 'RESOURCE_EXHAUSTED', '500', 'INTERNAL', '502', '503', '504', 'UNAVAILABLE',
+                      'DEADLINE_EXCEEDED', 'timed out', 'Timeout', 'ConnectionError', 'RemoteDisconnected')
+
+
+def classify_llm_error(exc):
+    """'quota' | 'auth' | 'transient' | 'permanent' for a provider exception (heterogeneous SDK errors)."""
+    text = f'{type(exc).__name__}: {exc}'
+    if 'PerDay' in text or 'per day' in text.lower():
+        return 'quota'
+    if isinstance(exc, AuthenticationError) or any(m in text for m in _AUTH_MARKERS):
+        return 'auth'
+    if any(m in text for m in _TRANSIENT_MARKERS):
+        return 'transient'
+    return 'permanent'
+
+
 def parse_json_object(raw):
     raw = (raw or '').strip()
     if raw.startswith('```'):
@@ -57,7 +101,7 @@ class LLMClient:
     Paced below per-minute limits; transient errors are retried; a daily quota raises QuotaExhausted."""
 
     def __init__(self, provider, model, *, min_interval_s=4.5, temperature=0.0, max_attempts=5,
-                 timeout_s=180, thinking_budget=None):
+                 timeout_s=180, thinking_budget=None, budget=None, max_invalid=2, transient_sleep_s=45):
         if provider not in ('gemini', 'openrouter'):
             raise ValueError(provider)
         if provider == 'openrouter' and not model.endswith(':free'):
@@ -67,6 +111,8 @@ class LLMClient:
         self.timeout_s, self.thinking_budget = timeout_s, thinking_budget
         self._client, self._last = None, 0.0
         self.calls = 0
+        self.budget = budget                        # CallBudget shared by the run's clients, or None
+        self.max_invalid, self.transient_sleep_s = max_invalid, transient_sleep_s
 
     def _gemini(self):
         if self._client is None:
@@ -74,7 +120,7 @@ class LLMClient:
             from google.genai import types
             key = os.environ.get('GEMINI_API_KEY')
             if not key:
-                raise RuntimeError('GEMINI_API_KEY is not loaded (run the secrets cell yourself)')
+                raise AuthenticationError('GEMINI_API_KEY is not loaded (run the secrets cell yourself)')
             # explicit timeout: without it a stalled request can block the run indefinitely
             self._client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=int(self.timeout_s * 1000)))
         return self._client
@@ -91,7 +137,7 @@ class LLMClient:
         import requests
         key = os.environ.get('OPENROUTER_API_KEY')
         if not key:
-            raise RuntimeError('OPENROUTER_API_KEY is not loaded')
+            raise AuthenticationError('OPENROUTER_API_KEY is not loaded')
         resp = requests.post('https://openrouter.ai/api/v1/chat/completions', timeout=180,
                              headers={'Authorization': f'Bearer {key}'},
                              json={'model': self.model, 'temperature': self.temperature,
@@ -103,11 +149,17 @@ class LLMClient:
         return resp.json()['choices'][0]['message'].get('content') or ''
 
     def chat_json(self, system, user):
-        """JSON object from the model; None when the model answered but never with valid JSON (an empty
-        result). Raises TransientLLMError when the service failed on every attempt, PermanentLLMError
-        when the request is refused, QuotaExhausted on a daily quota."""
-        last_transient = None
+        """JSON object from the model. Failure types (none of them is a translation result):
+          QuotaExhausted / CallLimitReached  daily quota or the run's request cap
+          AuthenticationError                key missing / invalid / not allowed
+          TransientLLMError                  503, 5xx, timeout, per-minute 429 on every attempt
+          PermanentLLMError                  the request itself is refused
+          InvalidLLMOutput                   answered, but no valid JSON object after `max_invalid` answers
+        A valid JSON object without usable content is returned as is (a valid empty result)."""
+        last_transient, invalid = None, 0
         for _ in range(self.max_attempts):
+            if self.budget is not None:
+                self.budget.take()
             wait = self.min_interval_s - (time.time() - self._last)
             if wait > 0:
                 time.sleep(wait)
@@ -115,25 +167,29 @@ class LLMClient:
             try:
                 self.calls += 1
                 raw = self._once(system, user)
-            except QuotaExhausted:
+            except (QuotaExhausted, AuthenticationError):
                 raise
             except Exception as exc:                       # noqa: BLE001 - provider errors are heterogeneous
-                text = str(exc)
-                if 'PerDay' in text or 'per day' in text.lower():
-                    raise QuotaExhausted(text[:200]) from exc
-                if any(s in text for s in ('429', 'RESOURCE_EXHAUSTED', '500', 'INTERNAL', '502', '503', '504',
-                                           'UNAVAILABLE', 'DEADLINE_EXCEEDED', 'timed out', 'Timeout')):
-                    last_transient = text[:200]
-                    time.sleep(45)
+                kind = classify_llm_error(exc)
+                if kind == 'quota':
+                    raise QuotaExhausted(str(exc)[:200]) from exc
+                if kind == 'auth':
+                    raise AuthenticationError(f'{type(exc).__name__}: {str(exc)[:200]}') from exc
+                if kind == 'transient':
+                    last_transient = str(exc)[:200]
+                    time.sleep(self.transient_sleep_s)
                     continue
-                raise PermanentLLMError(f'{type(exc).__name__}: {text[:200]}') from exc
+                raise PermanentLLMError(f'{type(exc).__name__}: {str(exc)[:200]}') from exc
             last_transient = None
             obj = parse_json_object(raw)
             if obj is not None:
                 return obj
+            invalid += 1
+            if invalid >= self.max_invalid:
+                break
         if last_transient is not None:
             raise TransientLLMError(last_transient)
-        return None
+        raise InvalidLLMOutput(f'{self.provider}:{self.model}: no valid JSON object in {invalid} answers')
 
 
 class IsometricLLM:
@@ -168,7 +224,7 @@ class IsometricLLM:
                    'short_letters': budget['short']}
         if self.language_aware:
             payload.update(task.get('language_block') or {})
-        obj = self.client.chat_json(self.system, json.dumps(payload, ensure_ascii=False)) or {}
+        obj = self.client.chat_json(self.system, json.dumps(payload, ensure_ascii=False))
         return [{'text': obj[k].strip(), 'variant': k} for k in ('fit', 'short')
                 if isinstance(obj.get(k), str) and obj[k].strip()]
 

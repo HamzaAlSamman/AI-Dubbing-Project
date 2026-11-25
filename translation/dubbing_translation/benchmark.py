@@ -85,7 +85,7 @@ def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print, 
     of spending hours of GPU on a model that did not load correctly (the probe lines stay in the
     cache file as evidence; delete the file before a retry with other settings)."""
     from pathlib import Path
-    from .generators import TransientLLMError
+    from .generators import InvalidLLMOutput, TransientLLMError
     from .text import arabic_fraction
     from .timing import letter_budget
     budget_cfg = budget_cfg or {'low': 0.90, 'high': 1.05, 'short_factor': 0.80}
@@ -106,7 +106,7 @@ def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print, 
         lo, hi = letter_budget(w, rate, low=budget_cfg['low'], high=budget_cfg['high'])
         try:
             items = gen.generate(t, {'min': lo, 'max': hi, 'short': int(hi * budget_cfg['short_factor'])})
-        except TransientLLMError as exc:                 # service failure: not a result, not cached
+        except (TransientLLMError, InvalidLLMOutput) as exc:   # not a result: not cached, retried later
             deferred.append(t['unit_id'])
             log(f'{gen.name}: {t["unit_id"]} deferred ({str(exc)[:80]})')
             continue

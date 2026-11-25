@@ -61,7 +61,7 @@ class FakeClient:
 
     def chat_json(self, system, user):
         self.calls += 1
-        return {'natural_ar': self.replies.pop(0)} if self.replies else None
+        return {'natural_ar': self.replies.pop(0)} if self.replies else {}   # valid JSON, no text
 
 
 def arabic_of(n_letters):

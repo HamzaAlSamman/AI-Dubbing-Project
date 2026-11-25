@@ -86,8 +86,10 @@ def term_key(en_form):
 class Glossary:
     """Terms with a status: 'approved' (a person or a reviewed file), 'auto_verified' (proposed
     independently with the same rendering by two or more videos), 'proposed' (one agent run),
-    'conflicting' (different renderings proposed). Only the statuses in Language.reject_statuses can
-    reject a candidate; the others are suggestions for the prompts and findings in the report."""
+    'conflicting' (different renderings proposed), 'rejected' (a person rejected that rendering).
+    Only the statuses in Language.reject_statuses can reject a candidate (default: 'approved' only);
+    'auto_verified' is a strong preference (prompts, reported when missing), the others are suggestions.
+    Agreement between videos is not proof that a rendering is correct."""
 
     def __init__(self, data, *, default_status='approved'):
         self.version = data.get('version', 'glossary')
@@ -255,7 +257,7 @@ class Language:
     """Policy + glossary + how the gate treats each kind of finding ('reject' | 'flag' | 'off')."""
 
     def __init__(self, policy=None, glossary=None, *, terminology='reject', dialect='reject', calques='flag',
-                 simplicity='flag', reject_statuses=('approved', 'auto_verified')):
+                 simplicity='flag', reject_statuses=('approved',)):
         if policy is not None and policy.terms.terms:
             glossary = glossary.merged(policy.terms) if glossary is not None else policy.terms
         self.policy, self.glossary = policy, glossary
@@ -288,7 +290,7 @@ class Language:
         return cls(policy, glossary, terminology=lc.get('terminology', 'reject'),
                    dialect=lc.get('dialect', 'reject'), calques=lc.get('calques', 'flag'),
                    simplicity=lc.get('simplicity', 'flag'),
-                   reject_statuses=tuple(lc.get('reject_statuses', ('approved', 'auto_verified'))))
+                   reject_statuses=tuple(lc.get('reject_statuses', ('approved',))))
 
     def check(self, source, arabic):
         missing = self.glossary.missing(source, arabic) if self.glossary else []
@@ -303,7 +305,7 @@ class Language:
     def reasons(self, found):
         """Gate reasons for the findings whose mode is 'reject'."""
         out = []
-        if self.modes['terminology'] == 'reject':                  # only verified / approved terms reject
+        if self.modes['terminology'] == 'reject':                  # only the reject_statuses (approved) reject
             out += ['term:' + t for t in found.get('terms_enforced', found['terms'])]
         if self.modes['dialect'] == 'reject' and found['dialect']:
             out.append('dialect:' + ','.join(sorted(set(found['dialect']))))
@@ -395,9 +397,12 @@ class CourseMemory:
     units, context sentence, glossary version, model, time. Status per term:
       proposed      one video proposed it                         -> suggestion only
       auto_verified two or more videos proposed the SAME rendering independently (the terminology agent is
-                    shown only verified terms, so a repeated proposal is an independent one)  -> enforced
+                    shown only verified terms, so a repeated proposal is an independent one)
+                    -> strong preference: given to the prompts and reported when missing, NOT a rejection
+                    reason by default (agreement is not proof of correctness; measured in Phase 1)
       conflicting   different renderings were proposed             -> suggestion only, listed in 'conflicts'
-      approved / rejected  set by a person (set_status); never set automatically   -> approved is enforced
+      approved / rejected  set by a person (set_status); never set automatically
+                    -> approved can be enforced; a rejected rendering is removed from later proposals
     A video is recorded once (a rerun replaces its own contribution). The memory is written only by
     record_video / set_status, under a lock, by re-reading the file and merging (no lost update), with an
     atomic replace and a copy of every revision in history/."""
@@ -465,8 +470,10 @@ class CourseMemory:
                 verified.append({'en': t['en'], 'ar': t['chosen'], 'ar_forms': r.get('ar_forms', []),
                                  'avoid': r.get('avoid', []), 'status': t['status']})
         body = json.dumps(self.data, ensure_ascii=False, sort_keys=True).encode('utf-8')
+        rejected = [{'en': t['en'], 'ar': t['chosen']} for _, t in sorted(self.data['terms'].items())
+                    if t['status'] == 'rejected' and t.get('chosen')]
         return {'schema': self.SCHEMA, 'memory_path': str(self.path), 'revision': self.data.get('revision', 0),
-                'memory_sha256': hashlib.sha256(body).hexdigest(), 'verified': verified}
+                'memory_sha256': hashlib.sha256(body).hexdigest(), 'verified': verified, 'rejected': rejected}
 
     def glossary(self):
         v = self.terms
@@ -585,13 +592,14 @@ def term_contexts(terms, tasks):
     return out
 
 
-def build_glossary(tasks, client, cache_dir, *, max_terms=40, prior_terms=(), log=print):
+def build_glossary(tasks, client, cache_dir, *, max_terms=40, prior_terms=(), rejected_terms=(), log=print):
     """Terminology agent: the LLM reads the whole transcript once, before translation, and proposes
     the glossary of this video. `prior_terms` are the course's approved terms from earlier videos: the
     agent must reuse them and only add new ones, and they win over its proposals.
     Write-once cache keyed by transcript + prior terms + prompt + model, so a rerun reuses the same
-    decisions and the file can be reviewed or edited by a person.
-    Returns (glossary, cache path, subject)."""
+    decisions and the file can be reviewed or edited by a person. A reply that is not valid JSON is not
+    cached (it raises InvalidLLMOutput); `rejected_terms` (a person's rejections) are dropped from the
+    proposals. Returns (glossary, cache path, subject)."""
     import json
     from .common import now_iso, read_json, sha256_json, write_json_once
     from .prompts import GLOSSARY_SYSTEM, GLOSSARY_VERSION
@@ -605,7 +613,10 @@ def build_glossary(tasks, client, cache_dir, *, max_terms=40, prior_terms=(), lo
         payload = {'transcript': transcript}
         if prior:
             payload['approved_terms_from_earlier_videos'] = prior
-        reply = client.chat_json(GLOSSARY_SYSTEM, json.dumps(payload, ensure_ascii=False)) or {}
+        reply = client.chat_json(GLOSSARY_SYSTEM, json.dumps(payload, ensure_ascii=False))
+        if not isinstance(reply, dict):                                    # malformed: never cached as a result
+            from .generators import InvalidLLMOutput
+            raise InvalidLLMOutput('terminology agent: reply is not a JSON object')
         terms = [t for t in reply.get('terms') or [] if isinstance(t, dict)][:max_terms]
         rec = {'version': f'{GLOSSARY_VERSION}__{key}', 'builder': f'{client.provider}:{client.model}',
                'subject': reply.get('subject'), 'created_at': now_iso(), 'prior_terms': len(prior),
@@ -613,7 +624,10 @@ def build_glossary(tasks, client, cache_dir, *, max_terms=40, prior_terms=(), lo
         write_json_once(path, rec)
         log(f'[glossary] {len(terms)} terms for "{rec["subject"]}" by {rec["builder"]} '
             f'({len(prior)} course terms given) -> {path}')
-    glossary = Glossary.from_terms(rec['terms'], rec['version'])           # this video's proposals
+    banned = {(term_key((t.get('en') or [''])[0]), normalize_ar(t.get('ar') or '')) for t in rejected_terms}
+    proposals = [t for t in rec['terms'] if isinstance(t.get('en'), list) and t['en']
+                 and (term_key(t['en'][0]), normalize_ar(t.get('ar') or '')) not in banned]
+    glossary = Glossary.from_terms(proposals, rec['version'])              # this video's proposals
     if prior_terms:                                                        # verified course terms win
         glossary = Glossary.from_terms(list(prior_terms), 'course_memory').merged(glossary)
     return glossary, path, rec.get('subject')

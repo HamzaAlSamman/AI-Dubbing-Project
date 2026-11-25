@@ -94,12 +94,52 @@ class ApiFailureTests(unittest.TestCase):
             c.chat_json('s', 'u')
         self.assertEqual(c.calls, 2)                                  # bounded retries
 
-    def test_client_unparsable_output_is_an_empty_result_not_a_failure(self):
-        from dubbing_translation.generators import LLMClient
-        c = LLMClient('gemini', 'm', min_interval_s=0, max_attempts=2)
+    def test_client_unparsable_output_is_invalid_not_an_empty_result(self):
+        from dubbing_translation.generators import InvalidLLMOutput, LLMClient
+        c = LLMClient('gemini', 'm', min_interval_s=0, max_attempts=5)
         c._once = lambda s, u: 'not json at all'
+        with _NoSleep(), self.assertRaises(InvalidLLMOutput):
+            c.chat_json('s', 'u')
+        self.assertEqual(c.calls, 2)                                  # bounded: max_invalid answers
+
+    def test_client_valid_empty_json_is_a_result(self):
+        from dubbing_translation.generators import LLMClient
+        c = LLMClient('gemini', 'm', min_interval_s=0)
+        c._once = lambda s, u: '{}'
         with _NoSleep():
-            self.assertIsNone(c.chat_json('s', 'u'))
+            self.assertEqual(c.chat_json('s', 'u'), {})
+
+    def test_client_authentication_failure_is_typed_and_not_retried(self):
+        from dubbing_translation.generators import AuthenticationError, LLMClient
+        c = LLMClient('gemini', 'm', min_interval_s=0, max_attempts=3)
+        c._once = _raise(ValueError('400 API_KEY_INVALID: API key not valid'))
+        with _NoSleep(), self.assertRaises(AuthenticationError):
+            c.chat_json('s', 'u')
+        self.assertEqual(c.calls, 1)
+        import os
+        saved = os.environ.pop('GEMINI_API_KEY', None)
+        try:
+            with self.assertRaises(AuthenticationError):              # missing key: not a per-unit error
+                LLMClient('gemini', 'm')._gemini()
+        finally:
+            if saved is not None:
+                os.environ['GEMINI_API_KEY'] = saved
+
+    def test_client_quota_and_request_cap(self):
+        from dubbing_translation.generators import CallBudget, CallLimitReached, LLMClient, QuotaExhausted
+        c = LLMClient('gemini', 'm', min_interval_s=0)
+        c._once = _raise(RuntimeError('429 RESOURCE_EXHAUSTED quotaId GenerateRequestsPerDayPerProjectPerModel'))
+        with _NoSleep(), self.assertRaises(QuotaExhausted):
+            c.chat_json('s', 'u')
+        budget = CallBudget(2)
+        a, b = LLMClient('gemini', 'a', min_interval_s=0, budget=budget), LLMClient('gemini', 'b', min_interval_s=0,
+                                                                                    budget=budget)
+        a._once = b._once = lambda s, u: '{"x": 1}'
+        a.chat_json('s', 'u')
+        b.chat_json('s', 'u')
+        with self.assertRaises(CallLimitReached):                     # shared by every client of the run
+            a.chat_json('s', 'u')
+        self.assertEqual((budget.used, a.calls + b.calls), (2, 2))
 
     def test_client_permanent_error_is_typed(self):
         from dubbing_translation.generators import LLMClient, PermanentLLMError
@@ -177,12 +217,15 @@ class ApiFailureTests(unittest.TestCase):
         gen = Gen()
         _, _, metrics = run(self.tasks[:1], self.windows, load_config(), self.work, generators=[gen], qe=FakeQE(),
                             speller=FakeSpeller(), log=lambda *_: None)
-        rec = json.loads((self.work / 'cache' / 'candidates' / 'blocked' / 'u0.json').read_text(encoding='utf-8'))
-        self.assertEqual(rec['status'], 'error')
+        folder = self.work / 'cache' / 'candidates' / 'blocked'
+        self.assertFalse((folder / 'u0.json').exists())               # a failure is never a result
+        rec = json.loads((folder / 'u0.failure.json').read_text(encoding='utf-8'))
+        self.assertEqual((rec['kind'], rec['attempts']), ('permanent', 1))
         self.assertTrue(metrics['degraded'])
-        run(self.tasks[:1], self.windows, load_config(), self.work, generators=[gen], qe=FakeQE(),
-            speller=FakeSpeller(), log=lambda *_: None, run_label='again')
+        _, _, m2 = run(self.tasks[:1], self.windows, load_config(), self.work, generators=[gen], qe=FakeQE(),
+                       speller=FakeSpeller(), log=lambda *_: None, run_label='again')
         self.assertEqual(gen.calls, 1)                                # not retried forever
+        self.assertTrue(m2['degraded'])
 
     def test_quota_in_ranker_marks_the_run_degraded(self):
         from dubbing_translation.generators import QuotaExhausted
@@ -232,6 +275,110 @@ class ApiFailureTests(unittest.TestCase):
         self.assertEqual(report['deferred'], ['u0'])
         self.assertNotIn('u0', out)
 
+
+
+    def _flaky_gen(self, name, plan):
+        """Generator whose answer per call follows `plan` (list of 'ok' | 'invalid' | 'permanent')."""
+        from dubbing_translation.generators import InvalidLLMOutput, PermanentLLMError
+
+        class Gen:
+            uses_budget = False
+
+            def __init__(self):
+                self.name, self.calls = name, 0
+
+            def generate(self, task, budget):
+                step = plan[min(self.calls, len(plan) - 1)]
+                self.calls += 1
+                if step == 'invalid':
+                    raise InvalidLLMOutput('no JSON')
+                if step == 'permanent':
+                    raise PermanentLLMError('400 blocked')
+                return [{'text': 'كتبنا ' * 6, 'variant': 'v'}]
+        return Gen()
+
+    def _run(self, gens, cfg=None, label=''):
+        from dubbing_translation.io import load_config
+        from dubbing_translation.pipeline import run
+        from test_translation_step import FakeQE, FakeSpeller
+        return run(self.tasks[:1], self.windows, cfg or load_config(), self.work, generators=gens, qe=FakeQE(),
+                   speller=FakeSpeller(), log=lambda *_: None, run_label=label)
+
+    def test_invalid_output_is_not_cached_and_retried_a_bounded_number_of_times(self):
+        folder = self.work / 'cache' / 'candidates' / 'inv'
+        gen = self._flaky_gen('inv', ['invalid'])
+        for i in range(5):
+            _, final, metrics = self._run([gen], label=f'r{i}')
+            self.assertFalse((folder / 'u0.json').exists())
+            self.assertTrue(metrics['degraded'])
+            self.assertIn('invalid_output', ' '.join(metrics['degraded_reasons']))
+        self.assertEqual(gen.calls, 3)                                # models.max_unit_attempts (default 3)
+        self.assertEqual(json.loads((folder / 'u0.failure.json').read_text(encoding='utf-8'))['attempts'], 3)
+
+    def test_retry_errors_after_the_cause_is_fixed_keeps_good_results(self):
+        from dubbing_translation.io import load_config
+        good = self._flaky_gen('good', ['ok'])
+        bad = self._flaky_gen('bad', ['permanent', 'ok'])
+        self._run([good, bad])
+        good_rec = (self.work / 'cache' / 'candidates' / 'good' / 'u0.json').read_bytes()
+        self._run([good, bad], label='again')
+        self.assertEqual(bad.calls, 1)                                # blocked until asked
+        cfg = load_config()
+        cfg['models']['retry_errors'] = True
+        _, final, metrics = self._run([good, bad], cfg, label='retry')
+        self.assertEqual((good.calls, bad.calls), (1, 2))             # the good result is not regenerated
+        self.assertEqual((self.work / 'cache' / 'candidates' / 'good' / 'u0.json').read_bytes(), good_rec)
+        self.assertTrue((self.work / 'cache' / 'candidates' / 'bad' / 'u0.json').exists())
+        ledger = json.loads((self.work / 'cache' / 'candidates' / 'bad' / 'u0.failure.json').read_text(encoding='utf-8'))
+        self.assertIsNotNone(ledger['resolved_at'])                   # the history of the failure is kept
+        self.assertFalse(metrics['degraded'])
+
+    def test_authentication_failure_stops_the_generator_and_caches_nothing(self):
+        from dubbing_translation.generators import AuthenticationError
+
+        class NoKey:
+            uses_budget, name, calls = False, 'nokey', 0
+
+            def generate(self, task, budget):
+                self.calls += 1
+                raise AuthenticationError('GEMINI_API_KEY is not loaded')
+        gen = NoKey()
+        _, _, metrics = self._run([gen])
+        folder = self.work / 'cache' / 'candidates' / 'nokey'
+        self.assertFalse(folder.exists() and any(folder.iterdir()))
+        self.assertIn('authentication', ' '.join(metrics['degraded_reasons']))
+        self.assertEqual(metrics['deferred_units'], {'nokey': ['u0']})
+
+    def test_invalid_json_from_an_llm_role_is_not_cached(self):
+        from dubbing_translation.generators import InvalidLLMOutput
+        from dubbing_translation.io import load_config
+        from test_translation_step import FixedGen, arabic_of
+        cfg = load_config()
+        good = arabic_of(int(3.0 * cfg['voice']['letters_per_second']))
+
+        class BadJSON:
+            provider, model, calls = 'fake', 'ranker', 0
+
+            def chat_json(self, system, user):
+                self.calls += 1
+                raise InvalidLLMOutput('no JSON')
+        gens = [FixedGen('a', {'u0': good}), FixedGen('b', {'u0': good + ' و'})]
+        from dubbing_translation.pipeline import run
+        from test_translation_step import FakeQE, FakeSpeller
+        _, final, metrics = run(self.tasks[:1], self.windows, cfg, self.work, generators=gens, qe=FakeQE(),
+                                speller=FakeSpeller(), rank_client=BadJSON(), log=lambda *_: None)
+        self.assertEqual(final[0]['status'], 'accepted')              # the MetricX choice is kept
+        self.assertFalse((self.work / 'cache' / 'rank').exists())
+        self.assertTrue(metrics['degraded'])
+        self.assertIn('invalid_output:rank', ' '.join(metrics['degraded_reasons']))
+
+    def test_quality_rejection_is_not_infrastructure_degradation(self):
+        from test_translation_step import FixedGen
+        _, final, metrics = self._run([FixedGen('short', {'u0': 'كتب'})])
+        self.assertEqual(final[0]['status'], 'needs_review')          # failed the quality gate
+        self.assertFalse(metrics['degraded'])                         # but the run is complete
+        self.assertEqual(metrics['infrastructure'], 'complete')
+        self.assertEqual(metrics['quality_gate']['failed_gate'], 1)
 
 
 # ---------------------------------------------------------------- P0-3 source numbers are never rewritten
@@ -384,15 +531,43 @@ class CourseMemoryV2Tests(unittest.TestCase):
         self.assertEqual(d['terms']['label']['renderings']['تسمية']['videos'], ['v1'])
         self.assertEqual(d['terms']['label']['status'], 'proposed')     # one video is not a verification
 
-    def test_independent_agreement_verifies_and_is_then_enforced(self):
+    def test_independent_agreement_verifies_but_is_only_a_strong_preference(self):
         self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
         a2 = _Agent([{'en': ['label'], 'ar': 'تسمية'}])
         self._run('v2', a2)
         self.assertIsNone(a2.priors[0])                                  # proposed terms are not shown: independent
         self.assertEqual(self._data()['terms']['label']['status'], 'auto_verified')
         _, final, _ = self._run('v3', _Agent([]))
-        self.assertEqual(final[0]['status'], 'needs_review')            # 'الوسم' now rejected: verified term
+        self.assertEqual(final[0]['status'], 'accepted')                # agreement is not proof: no rejection
+        self.assertNotIn('term:label', final[0]['reasons'])
+        self.assertIn('label', final[0]['language']['terms'])           # but reported as missing
+
+    def test_auto_verified_can_reject_only_when_the_config_asks(self):
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        self._run('v2', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        self.cfg['language']['reject_statuses'] = ['approved', 'auto_verified']
+        _, final, _ = self._run('v3', _Agent([]))
         self.assertIn('term:label', final[0]['reasons'])
+
+    def test_a_rejected_rendering_is_dropped_from_later_proposals(self):
+        from dubbing_translation.language import CourseMemory
+        self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        CourseMemory(self.mem).set_status('label', 'rejected', rendering='تسمية', by='reviewer')
+        run_dir, final, _ = self._run('v2', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
+        glossary = json.loads((run_dir / 'glossary.json').read_text(encoding='utf-8'))
+        self.assertNotIn('label', [t['id'] for t in glossary['terms']])
+        self.assertEqual(self._data()['terms']['label']['status'], 'rejected')   # a person's decision is kept
+
+    def test_invalid_glossary_reply_is_not_cached(self):
+        class Broken(_Agent):
+            def chat_json(self, system, user):
+                self.calls += 1
+                from dubbing_translation.generators import InvalidLLMOutput
+                raise InvalidLLMOutput('no JSON')
+        _, _, metrics = self._run('v1', Broken())
+        self.assertFalse((self.root / 'v1' / 'translation_step' / 'cache' / 'glossary').exists())
+        self.assertTrue(metrics['degraded'])
+        self.assertFalse(self.mem.exists())                             # a degraded run writes no memory
 
     def test_conflict_is_recorded_and_never_enforced(self):
         self._run('v1', _Agent([{'en': ['label'], 'ar': 'تسمية'}]))
