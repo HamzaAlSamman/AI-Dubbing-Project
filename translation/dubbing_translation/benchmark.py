@@ -73,15 +73,19 @@ class DegenerateOutput(RuntimeError):
     """A generator's first outputs are not Arabic: broken load (dtype, quantisation, custom code)."""
 
 
-def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print, probe=3, min_arabic=0.6):
+def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print, probe=3, min_arabic=0.6,
+                    report=None):
     """Run one generator over the benchmark tasks with a resumable jsonl cache
     (cache_dir/<generator name>.jsonl, one line per unit). Returns {unit_id: first candidate}:
     plain/greedy for MT models, 'fit' for the length-controlled LLM.
 
+    A service failure (TransientLLMError) is not written: the unit is listed in report['deferred'] and
+    retried by the next call.
     Fail fast: if the first `probe` new outputs are all non-Arabic, raise DegenerateOutput instead
     of spending hours of GPU on a model that did not load correctly (the probe lines stay in the
     cache file as evidence; delete the file before a retry with other settings)."""
     from pathlib import Path
+    from .generators import TransientLLMError
     from .text import arabic_fraction
     from .timing import letter_budget
     budget_cfg = budget_cfg or {'low': 0.90, 'high': 1.05, 'short_factor': 0.80}
@@ -94,11 +98,18 @@ def generate_cached(gen, tasks, cache_dir, *, rate, budget_cfg=None, log=print, 
                 rec = json.loads(line)
                 done[rec['unit_id']] = rec['items']
     todo = [t for t in tasks if t['unit_id'] not in done]
-    bad = 0
+    bad, deferred = 0, []
+    if report is not None:
+        report['deferred'] = deferred
     for i, t in enumerate(todo, 1):
         w = Window(t['unit_id'], t['slot_s'], t['slot_s'])
         lo, hi = letter_budget(w, rate, low=budget_cfg['low'], high=budget_cfg['high'])
-        items = gen.generate(t, {'min': lo, 'max': hi, 'short': int(hi * budget_cfg['short_factor'])})
+        try:
+            items = gen.generate(t, {'min': lo, 'max': hi, 'short': int(hi * budget_cfg['short_factor'])})
+        except TransientLLMError as exc:                 # service failure: not a result, not cached
+            deferred.append(t['unit_id'])
+            log(f'{gen.name}: {t["unit_id"]} deferred ({str(exc)[:80]})')
+            continue
         done[t['unit_id']] = items
         with path.open('a', encoding='utf-8') as f:
             f.write(json.dumps({'unit_id': t['unit_id'], 'items': items}, ensure_ascii=False) + '\n')

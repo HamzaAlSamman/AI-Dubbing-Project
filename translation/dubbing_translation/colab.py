@@ -182,7 +182,7 @@ def format_table(summary):
     return '\n'.join(lines)
 
 
-def compare_v1_v2(run_dir, v2_run, *, work_subdir='translation_step', v1_glob='*final_v1*'):
+def compare_v1_v2(run_dir, v2_run, *, work_subdir='translation_step', v1_glob='*final_v1*', allow_degraded=False):
     """V1 (final_v1) vs a V2 run on the same lecture: acceptance, MetricX QE, and the language findings of
     the delivered lines, both measured with the V2 run's own glossary and policy."""
     import statistics
@@ -191,7 +191,12 @@ def compare_v1_v2(run_dir, v2_run, *, work_subdir='translation_step', v1_glob='*
     runs = Path(run_dir) / work_subdir / 'runs'
     v1_dir = sorted(runs.glob(v1_glob))[-1]
     v2_dir = Path(v2_run)
-    cfg = read_json(v2_dir / 'manifest.json')['config']
+    v2_manifest = read_json(v2_dir / 'manifest.json')
+    status = v2_manifest.get('status') or {}
+    if status.get('degraded') and not allow_degraded:
+        raise ValueError(f'{v2_dir.name} is degraded ({status.get("reasons")}); it is not a complete run. '
+                         'Rerun to resume, or pass allow_degraded=True for a diagnostic table.')
+    cfg = v2_manifest['config']
     g = read_json(v2_dir / 'glossary.json') if (v2_dir / 'glossary.json').exists() else None
     glossary = Glossary({'version': g['version'], 'term': g['terms']}) if g else None
     lang = Language(Policy.load(cfg['language']['policy']), glossary)

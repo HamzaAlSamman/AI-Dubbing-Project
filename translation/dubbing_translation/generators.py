@@ -17,6 +17,16 @@ from pathlib import Path
 from .prompts import ISOMETRIC_SYSTEM, ISOMETRIC_V2_SYSTEM, ISOMETRIC_V2_VERSION, ISOMETRIC_VERSION
 
 
+class TransientLLMError(RuntimeError):
+    """The service did not answer (503, 5xx, timeout, per-minute 429) after the bounded retries.
+    Not a translation result: never cached; the unit is deferred and retried by the next run."""
+
+
+class PermanentLLMError(RuntimeError):
+    """The request itself is refused (4xx other than rate limits, blocked content, bad request).
+    Recorded once as an error for that unit so it is not retried forever; the run is degraded."""
+
+
 class QuotaExhausted(RuntimeError):
     """Daily quota reached: the run stops cleanly; finished units stay cached."""
 
@@ -93,6 +103,10 @@ class LLMClient:
         return resp.json()['choices'][0]['message'].get('content') or ''
 
     def chat_json(self, system, user):
+        """JSON object from the model; None when the model answered but never with valid JSON (an empty
+        result). Raises TransientLLMError when the service failed on every attempt, PermanentLLMError
+        when the request is refused, QuotaExhausted on a daily quota."""
+        last_transient = None
         for _ in range(self.max_attempts):
             wait = self.min_interval_s - (time.time() - self._last)
             if wait > 0:
@@ -109,12 +123,16 @@ class LLMClient:
                     raise QuotaExhausted(text[:200]) from exc
                 if any(s in text for s in ('429', 'RESOURCE_EXHAUSTED', '500', 'INTERNAL', '502', '503', '504',
                                            'UNAVAILABLE', 'DEADLINE_EXCEEDED', 'timed out', 'Timeout')):
+                    last_transient = text[:200]
                     time.sleep(45)
                     continue
-                raise
+                raise PermanentLLMError(f'{type(exc).__name__}: {text[:200]}') from exc
+            last_transient = None
             obj = parse_json_object(raw)
             if obj is not None:
                 return obj
+        if last_transient is not None:
+            raise TransientLLMError(last_transient)
         return None
 
 

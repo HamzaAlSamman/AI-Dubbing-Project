@@ -54,5 +54,184 @@ class ColabEnvironmentTests(unittest.TestCase):
         self.assertTrue(need['gpu'])
 
 
+
+# ---------------------------------------------------------------- P0-2 API failures, cache, degraded runs
+class _NoSleep:
+    def __enter__(self):
+        import dubbing_translation.generators as g
+        self.g, self.orig = g, g.time.sleep
+        g.time.sleep = lambda *_: None
+        return self
+
+    def __exit__(self, *a):
+        self.g.time.sleep = self.orig
+
+
+def _raise(exc):
+    def f(*_a, **_k):
+        raise exc
+    return f
+
+
+class ApiFailureTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from dubbing_translation.timing import Window
+        self.tmp = tempfile.TemporaryDirectory()
+        self.work = Path(self.tmp.name)
+        self.tasks = [{'unit_id': f'u{i}', 'source_text': 'we take the values and use them now', 'context_before': [],
+                       'context_after': [], 'source_duration_s': 3.0} for i in range(2)]
+        self.windows = {t['unit_id']: Window(t['unit_id'], 3.0, 3.0) for t in self.tasks}
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_client_raises_transient_error_instead_of_returning_none(self):
+        from dubbing_translation.generators import LLMClient, TransientLLMError
+        c = LLMClient('gemini', 'm', min_interval_s=0, max_attempts=2)
+        c._once = _raise(RuntimeError('503 UNAVAILABLE. high demand'))
+        with _NoSleep(), self.assertRaises(TransientLLMError):
+            c.chat_json('s', 'u')
+        self.assertEqual(c.calls, 2)                                  # bounded retries
+
+    def test_client_unparsable_output_is_an_empty_result_not_a_failure(self):
+        from dubbing_translation.generators import LLMClient
+        c = LLMClient('gemini', 'm', min_interval_s=0, max_attempts=2)
+        c._once = lambda s, u: 'not json at all'
+        with _NoSleep():
+            self.assertIsNone(c.chat_json('s', 'u'))
+
+    def test_client_permanent_error_is_typed(self):
+        from dubbing_translation.generators import LLMClient, PermanentLLMError
+        c = LLMClient('gemini', 'm', min_interval_s=0, max_attempts=3)
+        c._once = _raise(ValueError('400 INVALID_ARGUMENT'))
+        with _NoSleep(), self.assertRaises(PermanentLLMError):
+            c.chat_json('s', 'u')
+        self.assertEqual(c.calls, 1)
+
+    def _gen(self, behaviour):
+        from dubbing_translation.generators import TransientLLMError
+
+        class Gen:
+            uses_budget, name = False, 'flaky'
+
+            def __init__(self):
+                self.calls = 0
+
+            def generate(self, task, budget):
+                self.calls += 1
+                if behaviour(task['unit_id']) == 'transient':
+                    raise TransientLLMError('503 after retries')
+                return [{'text': 'كتبنا ' * 6, 'variant': 'v'}]
+        return Gen()
+
+    def test_transient_failure_is_not_cached_and_marks_the_run_degraded(self):
+        from dubbing_translation.io import load_config
+        from dubbing_translation.pipeline import run
+        from test_translation_step import FakeQE, FakeSpeller
+        cfg = load_config()
+        gen = self._gen(lambda u: 'transient' if u == 'u0' else 'ok')
+        run_dir, final, metrics = run(self.tasks, self.windows, cfg, self.work, generators=[gen], qe=FakeQE(),
+                                      speller=FakeSpeller(), log=lambda *_: None)
+        self.assertFalse((self.work / 'cache' / 'candidates' / 'flaky' / 'u0.json').exists())
+        self.assertTrue((self.work / 'cache' / 'candidates' / 'flaky' / 'u1.json').exists())
+        self.assertTrue(metrics['degraded'])
+        self.assertEqual(metrics['deferred_units'], {'flaky': ['u0']})
+        manifest = json.loads((run_dir / 'manifest.json').read_text(encoding='utf-8'))
+        self.assertTrue(manifest['status']['degraded'])
+        # resume: the deferred unit is generated on the next run, the cached one is not regenerated
+        gen2 = self._gen(lambda u: 'ok')
+        _, _, metrics2 = run(self.tasks, self.windows, cfg, self.work, generators=[gen2], qe=FakeQE(),
+                             speller=FakeSpeller(), log=lambda *_: None, run_label='resume')
+        self.assertEqual(gen2.calls, 1)
+        self.assertFalse(metrics2['degraded'])
+
+    def test_consecutive_transient_failures_stop_the_generator(self):
+        from dubbing_translation.io import load_config
+        from dubbing_translation.pipeline import run
+        from dubbing_translation.timing import Window
+        from test_translation_step import FakeQE, FakeSpeller
+        tasks = [{'unit_id': f'u{i}', 'source_text': 'we take the values', 'context_before': [], 'context_after': [],
+                  'source_duration_s': 3.0} for i in range(6)]
+        windows = {t['unit_id']: Window(t['unit_id'], 3.0, 3.0) for t in tasks}
+        gen = self._gen(lambda u: 'transient')
+        _, _, metrics = run(tasks, windows, load_config(), self.work, generators=[gen], qe=FakeQE(),
+                            speller=FakeSpeller(), log=lambda *_: None)
+        self.assertEqual(gen.calls, 3)                                # max consecutive failures (default 3)
+        self.assertEqual(len(metrics['deferred_units']['flaky']), 6)
+        self.assertTrue(metrics['degraded'])
+
+    def test_permanent_error_is_recorded_once_and_marks_the_run_degraded(self):
+        from dubbing_translation.generators import PermanentLLMError
+        from dubbing_translation.io import load_config
+        from dubbing_translation.pipeline import run
+        from test_translation_step import FakeQE, FakeSpeller
+
+        class Gen:
+            uses_budget, name, calls = False, 'blocked', 0
+
+            def generate(self, task, budget):
+                self.calls += 1
+                raise PermanentLLMError('400 blocked')
+
+        gen = Gen()
+        _, _, metrics = run(self.tasks[:1], self.windows, load_config(), self.work, generators=[gen], qe=FakeQE(),
+                            speller=FakeSpeller(), log=lambda *_: None)
+        rec = json.loads((self.work / 'cache' / 'candidates' / 'blocked' / 'u0.json').read_text(encoding='utf-8'))
+        self.assertEqual(rec['status'], 'error')
+        self.assertTrue(metrics['degraded'])
+        run(self.tasks[:1], self.windows, load_config(), self.work, generators=[gen], qe=FakeQE(),
+            speller=FakeSpeller(), log=lambda *_: None, run_label='again')
+        self.assertEqual(gen.calls, 1)                                # not retried forever
+
+    def test_quota_in_ranker_marks_the_run_degraded(self):
+        from dubbing_translation.generators import QuotaExhausted
+        from dubbing_translation.io import load_config
+        from dubbing_translation.pipeline import run
+        from test_translation_step import FakeQE, FakeSpeller, FixedGen, arabic_of
+
+        class NoQuota:
+            provider, model, calls = 'fake', 'ranker', 0
+
+            def chat_json(self, system, user):
+                raise QuotaExhausted('per day')
+
+        cfg = load_config()
+        good = arabic_of(int(3.0 * cfg['voice']['letters_per_second']))
+        gens = [FixedGen('a', {'u0': good}), FixedGen('b', {'u0': good + ' و'})]
+        _, _, metrics = run(self.tasks[:1], self.windows, cfg, self.work, generators=gens, qe=FakeQE(),
+                            speller=FakeSpeller(), rank_client=NoQuota(), log=lambda *_: None)
+        self.assertTrue(metrics['degraded'])
+        self.assertIn('rank', ' '.join(metrics['degraded_reasons']))
+
+    def test_comparison_refuses_a_degraded_run(self):
+        from dubbing_translation.colab import compare_v1_v2
+        from dubbing_translation.io import load_config
+        from dubbing_translation.pipeline import run
+        from test_translation_step import FakeQE, FakeSpeller
+        cfg = load_config()
+        work = self.work / 'lesson' / 'translation_step'
+        ok = self._gen(lambda u: 'ok')
+        run(self.tasks, self.windows, cfg, work, generators=[ok], qe=FakeQE(), speller=FakeSpeller(),
+            log=lambda *_: None, run_label='final_v1')
+        flaky = self._gen(lambda u: 'transient')
+        flaky.name = 'flaky2'
+        v2_dir, _, _ = run(self.tasks, self.windows, cfg, work, generators=[flaky], qe=FakeQE(),
+                           speller=FakeSpeller(), log=lambda *_: None, run_label='v2')
+        with self.assertRaises(ValueError):
+            compare_v1_v2(self.work / 'lesson', v2_dir)
+
+    def test_benchmark_cache_skips_transient_failures(self):
+        from dubbing_translation.benchmark import generate_cached
+        gen = self._gen(lambda u: 'transient' if u == 'u0' else 'ok')
+        report = {}
+        out = generate_cached(gen, [dict(t, slot_s=3.0) for t in self.tasks], self.work, rate=10.0,
+                              log=lambda *_: None, probe=0, report=report)
+        lines = (self.work / 'flaky.jsonl').read_text(encoding='utf-8').splitlines()
+        self.assertEqual([json.loads(x)['unit_id'] for x in lines], ['u1'])
+        self.assertEqual(report['deferred'], ['u0'])
+        self.assertNotIn('u0', out)
+
+
 if __name__ == '__main__':
     unittest.main()

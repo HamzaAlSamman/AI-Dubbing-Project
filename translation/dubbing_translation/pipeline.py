@@ -26,7 +26,10 @@ from pathlib import Path
 from . import __version__
 from .common import git_commit, now_iso, now_stamp, read_json, sha256_json, write_json_once
 from .gate import evaluate, only_duration_failed, rank_key
-from .generators import QuotaExhausted
+from .generators import PermanentLLMError, QuotaExhausted, TransientLLMError
+
+# an LLM role (glossary, refine, rank, polish) that fails is stopped for the run; the run is degraded
+LLM_STOP = (QuotaExhausted, TransientLLMError, PermanentLLMError)
 from .language import CourseMemory, Language, build_glossary
 from .segment import prepare_sources
 from .prompts import (POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM, RANK_V2_VERSION, RANK_VERSION,
@@ -57,9 +60,18 @@ def _candidate_path(work_dir, gen, unit_id, budget, lang_inputs=None):
     return Path(work_dir) / 'cache' / 'candidates' / gen.name / f'{unit_id}{suffix}.json'
 
 
-def generate_candidates(tasks, windows, generators, cfg, work_dir, log=print, language=None):
-    """Resumable: cached units are skipped. A daily-quota stop leaves the remaining units for the next run."""
+def generate_candidates(tasks, windows, generators, cfg, work_dir, log=print, language=None, report=None):
+    """Resumable: cached units are skipped.
+
+    Only real model answers are cached ('ok', or 'empty' when the model gave no usable text). A service
+    failure (TransientLLMError) is not cached: the unit is 'deferred' and retried by the next run; after
+    `models.max_consecutive_failures` deferrals in a row the generator stops for this run (no unbounded
+    retrying). A refused request (PermanentLLMError) is cached once as status 'error'. A daily quota
+    stops the generator. `report` receives {'deferred': {gen: [units]}, 'errors': {gen: [units]}}."""
     stopped = {}
+    report = report if report is not None else {}
+    deferred, errors = report.setdefault('deferred', {}), report.setdefault('errors', {})
+    max_fail = int(cfg.get('models', {}).get('max_consecutive_failures', 3))
     for gen in generators:
         todo = []
         for t in tasks:
@@ -69,16 +81,35 @@ def generate_candidates(tasks, windows, generators, cfg, work_dir, log=print, la
             if not path.exists():
                 todo.append(({**t, **lang_inputs}, budget, path))
         log(f'[candidates] {gen.name}: {len(todo)} to generate')
+        consecutive = 0
         for i, (t, budget, path) in enumerate(todo, 1):
             task = {**t, 'slot_s': windows[t['unit_id']].slot_s, 'window_s': windows[t['unit_id']].window_s}
             try:
                 items = gen.generate(task, budget)
             except QuotaExhausted as exc:
                 stopped[gen.name] = str(exc)[:200]
+                deferred.setdefault(gen.name, []).extend(x[0]['unit_id'] for x in todo[i - 1:])
                 log(f'[candidates] {gen.name}: quota reached after {i - 1} units; rerun later to resume')
                 break
+            except TransientLLMError as exc:
+                deferred.setdefault(gen.name, []).append(t['unit_id'])
+                consecutive += 1
+                if consecutive >= max_fail:
+                    stopped[gen.name] = f'{consecutive} consecutive service failures: {str(exc)[:150]}'
+                    deferred[gen.name].extend(x[0]['unit_id'] for x in todo[i:])
+                    log(f'[candidates] {gen.name}: service failing, stopped; {len(deferred[gen.name])} units deferred')
+                    break
+                continue
+            except PermanentLLMError as exc:
+                errors.setdefault(gen.name, []).append(t['unit_id'])
+                write_json_once(path, {'unit_id': t['unit_id'], 'generator': gen.name, 'budget': budget,
+                                       'items': [], 'status': 'error', 'error': str(exc)[:300],
+                                       'created_at': now_iso()})
+                continue
+            consecutive = 0
             write_json_once(path, {'unit_id': t['unit_id'], 'generator': gen.name, 'budget': budget,
-                                   'items': items, 'created_at': now_iso()})
+                                   'items': items, 'status': 'ok' if items else 'empty',
+                                   'created_at': now_iso()})
             if i % 10 == 0 or i == len(todo):
                 log(f'  {gen.name}: {i}/{len(todo)}')
         if hasattr(gen, 'close'):
@@ -86,9 +117,11 @@ def generate_candidates(tasks, windows, generators, cfg, work_dir, log=print, la
     return stopped
 
 
-def load_candidates(tasks, windows, generators, cfg, work_dir, language=None):
-    """{unit_id: [{'cand_id','generator','variant','text','raw_text'}]}; identical texts merged."""
+def load_candidates(tasks, windows, generators, cfg, work_dir, language=None, report=None):
+    """{unit_id: [{'cand_id','generator','variant','text','raw_text'}]}; identical texts merged.
+    `report['errors']` collects units whose cached record is a refused request ('error')."""
     out = {}
+    errors = report.setdefault('errors', {}) if report is not None else {}
     for t in tasks:
         budget = _budget(windows[t['unit_id']], cfg)
         seen, cands = {}, []
@@ -96,7 +129,10 @@ def load_candidates(tasks, windows, generators, cfg, work_dir, language=None):
             path = _candidate_path(work_dir, gen, t['unit_id'], budget, _language_inputs(t, language))
             if not path.exists():
                 continue
-            for item in read_json(path)['items']:
+            rec = read_json(path)
+            if rec.get('status') == 'error' and t['unit_id'] not in errors.get(gen.name, []):
+                errors.setdefault(gen.name, []).append(t['unit_id'])
+            for item in rec['items']:
                 text = clean_translation(item['text'])
                 if not text:
                     continue
@@ -295,6 +331,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
     work_dir = Path(work_dir)
     tasks, windows, source_prep = prepare_sources(tasks, windows, cfg)     # V2: ASR fragments / spelled digits
     auto_glossary, glossary_path, subject = None, None, None
+    stopped, gen_report = {}, {}
     memory = CourseMemory(course_memory) if course_memory else None
     lc = cfg.get('language') or {}
     if str(lc.get('glossary', '')).startswith('auto'):
@@ -303,8 +340,9 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
             try:
                 auto_glossary, glossary_path, subject = build_glossary(
                     tasks, builder, work_dir / 'cache', prior_terms=memory.terms if memory else (), log=log)
-            except QuotaExhausted as exc:
-                log(f'[glossary] quota reached, no automatic glossary this run: {str(exc)[:120]}')
+            except LLM_STOP as exc:
+                stopped['glossary'] = str(exc)[:200]
+                log(f'[glossary] service stopped, no automatic glossary this run: {str(exc)[:120]}')
         else:
             log('[glossary] no LLM client: the automatic glossary is skipped')
         if auto_glossary is None and memory is not None:
@@ -335,12 +373,13 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                     'video_subject': subject,
                     'course_memory': str(memory.path) if memory else None,
                     'course_memory_terms': len(memory.terms) if memory else None}}
-    write_json_once(run_dir / 'manifest.json', manifest)
+    write_json_once(run_dir / 'run_started.json', manifest)       # the complete manifest is written at the end
     if language is not None and language.glossary is not None:
         write_json_once(run_dir / 'glossary.json', language.glossary.as_dict())
 
-    stopped = generate_candidates(tasks, windows, generators, cfg, work_dir, log, language=language)
-    cands = load_candidates(tasks, windows, generators, cfg, work_dir, language=language)
+    stopped.update(generate_candidates(tasks, windows, generators, cfg, work_dir, log, language=language,
+                                       report=gen_report))
+    cands = load_candidates(tasks, windows, generators, cfg, work_dir, language=language, report=gen_report)
     misspelled, allow = score_all(tasks, cands, windows, cfg, qe, speller, language=language)
     cache_words = dict.fromkeys(misspelled)
 
@@ -369,7 +408,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
         if use_rank and len(accepted) >= 2:
             try:
                 ranked, _ = rank_unit(t, accepted, cfg, rank_client, work_dir, language)
-            except QuotaExhausted as exc:
+            except LLM_STOP as exc:
                 stopped['rank'] = str(exc)[:200]
                 use_rank, ranked = False, None
             if ranked is not None:
@@ -379,7 +418,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
             try:
                 chosen, refine_log[u] = refine_unit(t, w, cs, cfg, refine_client, qe, misspelled_fn, allow,
                                                     work_dir, log, language)
-            except QuotaExhausted as exc:
+            except LLM_STOP as exc:
                 stopped['refine'] = str(exc)[:200]
                 chosen = None
             if chosen is not None:
@@ -400,7 +439,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                 try:
                     ranked, _ = rank_unit(t, fit, cfg, rank_client, work_dir, language)
                     chosen = ranked or chosen
-                except QuotaExhausted as exc:
+                except LLM_STOP as exc:
                     stopped['rank'] = str(exc)[:200]
                     use_rank = False
         use_polish = (language is not None and refine_client is not None and cfg.get('polish', {}).get('enabled')
@@ -409,7 +448,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
             try:
                 polished, _ = polish_unit(t, w, chosen, cfg, refine_client, qe, misspelled_fn, allow, work_dir,
                                           language)
-            except QuotaExhausted as exc:
+            except LLM_STOP as exc:
                 stopped['polish'] = str(exc)[:200]
                 polished = None
             if polished is not None:
@@ -434,8 +473,13 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                       'rank_scores': chosen.get('rank_scores')})
 
     metrics = summarize(final, cands, stopped, refine_client, allow)
+    status = run_status(stopped, gen_report, cfg, language_requested=bool(lc), glossary_built=glossary_path is not None)
+    metrics.update({'degraded': status['degraded'], 'degraded_reasons': status['reasons'],
+                    'deferred_units': status['deferred_units'], 'error_units': status['error_units']})
+    manifest['status'] = status
     metrics['rank_changed_choice'] = rank_changed
     metrics['llm_calls_rank'] = getattr(rank_client, 'calls', 0) if rank_client else 0
+    write_json_once(run_dir / 'manifest.json', manifest)
     _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log)
     _append_registry(work_dir / 'registry.jsonl', manifest, metrics)
     if cfg.get('tracking', {}).get('mlflow'):
@@ -466,6 +510,22 @@ def summarize(final, cands, stopped, refine_client, allow):
         **language_metrics(final),
         'merged_units': sum(bool(f.get('merged_from')) for f in final),
     }
+
+
+def run_status(stopped, gen_report, cfg, *, language_requested, glossary_built):
+    """A run is 'degraded' when a required component did not do its work for every unit: a generator
+    or an LLM role stopped (quota, service failure), units are deferred or refused, or the automatic
+    glossary of a V2 config was not built. Degraded runs are not used as full runs in comparisons."""
+    deferred = {g: sorted(set(u)) for g, u in (gen_report.get('deferred') or {}).items() if u}
+    errors = {g: sorted(set(u)) for g, u in (gen_report.get('errors') or {}).items() if u}
+    reasons = [f'stopped:{k}: {v[:120]}' for k, v in stopped.items()]
+    reasons += [f'deferred:{g}:{len(u)} units' for g, u in deferred.items()]
+    reasons += [f'refused:{g}:{len(u)} units' for g, u in errors.items()]
+    lc = cfg.get('language') or {}
+    if language_requested and str(lc.get('glossary', '')).startswith('auto') and not glossary_built:
+        reasons.append('glossary:not built')
+    return {'degraded': bool(reasons), 'reasons': reasons, 'deferred_units': deferred, 'error_units': errors,
+            'finished_at': now_iso()}
 
 
 def language_metrics(final):
@@ -532,6 +592,8 @@ def _append_registry(path, manifest, metrics):
                                     'tasks_sha256', 'generators', 'qe_metric', 'refiner')}
     rec['metrics'] = {k: metrics[k] for k in ('units', 'accepted', 'accepted_pct', 'accepted_after_refine',
                                               'qe_mean', 'zones', 'picked_from', 'needs_review_units')}
+    rec['degraded'] = metrics.get('degraded', False)
+    rec['degraded_reasons'] = metrics.get('degraded_reasons', [])
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open('a', encoding='utf-8') as f:
         f.write(json.dumps(rec, ensure_ascii=False) + '\n')
