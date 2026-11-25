@@ -478,7 +478,8 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
         if ev['zone'] == 'speedup':
             flags.append(f'needs_speedup_x{ev["ratio_window"]:.2f}')
         final.append({'unit_id': u, 'source_text': t['source_text'], 'status': status,
-                      'natural_ar': chosen['text'], 'tts_text': tts_text(chosen['text']),
+                      'natural_ar': chosen['text'],
+                      'tts_text': tts_text(chosen['text'], version=cfg['voice'].get('spoken_version', 'v1')),
                       'selected_from': chosen['cand_id'], 'refined_from': chosen.get('refined_from'),
                       'polished_from': chosen.get('polished_from'), 'language': ev.get('language'),
                       'accurate_ar': accurate_of(cs), 'merged_from': t.get('merged_from'),

@@ -454,5 +454,62 @@ class CourseMemoryV2Tests(unittest.TestCase):
         self.assertFalse(self.mem.with_suffix('.lock').exists())
 
 
+
+# ---------------------------------------------------------------- P0-5 spoken text (v2)
+class SpokenTextTests(unittest.TestCase):
+    def say(self, text):
+        from dubbing_translation.text import tts_text
+        return tts_text(text, version='v2')
+
+    def test_programming_words_use_the_pronunciation_lexicon(self):
+        self.assertIn('حلقة فور', self.say('نستخدم حلقة for لتكرار الأمثلة'))
+        self.assertNotIn('إف أو آر', self.say('نستخدم حلقة for لتكرار الأمثلة'))
+        self.assertIn('نمباي دوت دوت', self.say('نستدعي np.dot'))         # the function is named dot
+        self.assertIn('إكس دوت شيب', self.say('الأمر x.shape'))
+        self.assertIn('جي بي يو', self.say('على GPU'))
+        self.assertIn('إيه بي آي', self.say('عبر API'))
+        self.assertIn('ريلو', self.say('الدالة ReLU'))
+
+    def test_numbers_are_read_by_one_deterministic_reader(self):
+        cases = {'12288': 'اثنا عشر ألفًا ومئتان وثمانية وثمانون', '2026': 'ألفان وستة وعشرون',
+                 '64': 'أربعة وستون', '255': 'مئتان وخمسة وخمسون', '1000': 'ألف', '3000': 'ثلاثة آلاف',
+                 '1,000,000': 'مليون', '0': 'صفر', '11': 'أحد عشر', '100000': 'مئة ألف'}
+        for digits, words in cases.items():
+            self.assertEqual(self.say(digits), words, digits)
+
+    def test_negative_decimal_percent_date_equation(self):
+        self.assertEqual(self.say('-5'), 'سالب خمسة')
+        self.assertEqual(self.say('3.14'), 'ثلاثة فاصلة واحد أربعة')
+        self.assertEqual(self.say('50%'), 'خمسون بالمئة')
+        out = self.say('25/11/2026')
+        self.assertNotRegex(out, r'\d')
+        self.assertIn('ألفان وستة وعشرون', out)
+        self.assertEqual(self.say('y = 2x + 1'), 'واي يساوي اثنان إكس زائد واحد')
+        self.assertEqual(self.say('y = x - 5'), 'واي يساوي إكس ناقص خمسة')
+        self.assertEqual(self.say('x = -5'), 'إكس يساوي سالب خمسة')
+
+    def test_letter_case_variables_are_spoken(self):
+        out = self.say('X الكبيرة و x الصغيرة و nx')
+        self.assertEqual(out.count('إكس'), 3)
+        self.assertNotRegex(out, '[A-Za-z]')
+
+    def test_result_does_not_depend_on_num2words(self):
+        import types
+        fake = types.ModuleType('num2words')
+        fake.num2words = lambda *a, **k: 'WRONG'
+        before = self.say('العدد 12288 و 7')
+        sys.modules['num2words'] = fake
+        try:
+            self.assertEqual(self.say('العدد 12288 و 7'), before)
+        finally:
+            del sys.modules['num2words']
+
+    def test_written_text_is_not_changed_and_v1_stays_the_default(self):
+        from dubbing_translation import text as T
+        src = 'نستخدم حلقة for و 12288'
+        self.assertEqual(T.tts_text(src), T.tts_text(src, version='v1'))   # V1 results stay reproducible
+        self.assertEqual(src, 'نستخدم حلقة for و 12288')
+
+
 if __name__ == '__main__':
     unittest.main()

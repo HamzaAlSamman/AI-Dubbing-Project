@@ -4,6 +4,7 @@ Letter counting matches the calibration of the speaking rate (Arabic letters onl
 diacritics and tatweel removed), so predicted durations stay comparable across runs.
 """
 import re
+from pathlib import Path
 
 _AR_MARKS = re.compile('[ً-ْٰـ]')       # harakat, superscript alef, tatweel
 _AR_WORD = re.compile('[ء-ي]+')
@@ -113,12 +114,19 @@ def _speak_latin(match):
     return spoken
 
 
-def tts_text(text):
-    """Arabic text as it should be spoken by an Arabic-only TTS voice.
+def tts_text(text, version='v1'):
+    """Arabic text as it should be spoken by an Arabic-only TTS voice. The written translation is not
+    changed; this is a separate string.
 
-    Variables are spelled in Arabic (x -> إكس, nx -> إن إكس), × and = are read as words,
-    enumerations 'a1, a2, …, am' become 'a1 و a2 وصولًا إلى am', markup and quotes are dropped,
-    digits become Arabic number words. The written translation is not changed."""
+    version 'v1' : the original reader (kept unchanged so V1 runs reproduce; numbers use num2words when it
+                   is installed and digit-by-digit otherwise, so its output depends on the environment).
+    version 'v2' : one deterministic reader (arabic_numbers.py) and the pronunciation lexicon
+                   (configs/pronunciation/common_v1.toml); signs, decimals, percents, dates and simple
+                   equations are read as words. Selected by [voice] spoken_version in the config."""
+    if version == 'v2':
+        return _tts_v2(text)
+    if version != 'v1':
+        raise ValueError(f'unknown spoken-text version {version!r}')
     t = clean_translation(text).translate(_INDIC_DIGITS)
     t = re.sub(r'[*_#«»“”"]', ' ', t)
     t = _ENUM.sub(r'\1 و\2 وصولًا إلى \3', t)
@@ -129,3 +137,69 @@ def tts_text(text):
     t = re.sub(r'\d+', lambda m: _number_words(m.group()), t)
     t = re.sub(r'\s*([،,.؟?!])\s*', r'\1 ', t)
     return re.sub(r'\s+', ' ', t).strip()
+
+
+
+# ---------------------------------------------------------------- spoken text v2
+_LEXICON = None
+_SPOKEN_V2_NUMBER = re.compile(r'(?<![\w.])\d{1,3}(?:,\d{3})+(?:\.\d+)?(?![\w])|(?<![\w.])\d+(?:\.\d+)?(?![\w])')
+_DATE = re.compile(r'\b(\d{1,2})/(\d{1,2})/(\d{4})\b')
+_ISO_DATE = re.compile(r'\b(\d{4})-(\d{2})-(\d{2})\b')
+_PERCENT = re.compile(r'(?<![\w.])(-?\d[\d,]*(?:\.\d+)?)\s*%')
+_MINUS = re.compile(r'[-−]\s*(?=\d)')
+_ACRONYM = re.compile(r'^[A-Z]{2,}$')
+
+
+def pronunciation_lexicon():
+    """{lower-case latin token: arabic spoken form} from configs/pronunciation/common_v1.toml."""
+    global _LEXICON
+    if _LEXICON is None:
+        import tomllib
+        path = Path(__file__).resolve().parent.parent / 'configs' / 'pronunciation' / 'common_v1.toml'
+        _LEXICON = {k.lower(): v for k, v in tomllib.loads(path.read_text(encoding='utf-8'))['words'].items()}
+    return _LEXICON
+
+
+def _speak_latin_v2(match):
+    from .arabic_numbers import number_words
+    word, digits = match.group(1), match.group(2)
+    lex = pronunciation_lexicon()
+    low = word.lower()
+    if low in lex:
+        spoken = lex[low]
+    elif _ACRONYM.match(word) or len(word) <= 3:     # acronyms and variables: letter by letter
+        spoken = ' '.join(LETTER_NAMES[c] for c in low)
+    else:
+        return match.group(0)                         # other English words are left to the voice
+    if digits:
+        spoken += ' ' + number_words(int(digits))
+    return spoken
+
+
+def _minus(match_obj, text):
+    """Unary minus ('= -5', start) -> سالب ; binary minus ('x - 5') -> ناقص."""
+    i = match_obj.start()
+    prev = text[:i].rstrip()
+    return ' ناقص ' if prev and (prev[-1].isalnum() or prev[-1] == ')') else ' سالب '
+
+
+def _tts_v2(text):
+    from .arabic_numbers import read_number
+    t = clean_translation(text).translate(_INDIC_DIGITS)
+    t = re.sub(r'[*_#«»“”"]', ' ', t)
+    t = _ENUM.sub(r'\1 و\2 وصولًا إلى \3', t)
+    t = _DATE.sub(lambda m: f'{read_number(m.group(1))}، {read_number(m.group(2))}، {read_number(m.group(3))}', t)
+    t = _ISO_DATE.sub(lambda m: f'{read_number(m.group(3))}، {read_number(m.group(2))}، {read_number(m.group(1))}', t)
+    t = _DIM.sub(' في ', t)
+    t = _PERCENT.sub(lambda m: read_number(m.group(1)) + ' بالمئة', t)
+    t = _MINUS.sub(lambda m: _minus(m, t), t)
+    for sym, word in (('≤', ' أصغر من أو يساوي '), ('≥', ' أكبر من أو يساوي '), ('×', ' في '),
+                      ('=', ' يساوي '), ('+', ' زائد '), ('<', ' أصغر من '), ('>', ' أكبر من '),
+                      ('…', '، ')):
+        t = t.replace(sym, word)
+    t = re.sub(r'(?<=\d)(?=[A-Za-z])', ' ', t)                           # 2x -> 2 x
+    t = re.sub(r'(?<=[A-Za-z0-9])\.(?=[A-Za-z])', ' دوت ', t)            # x.shape, np.dot
+    t = _LATIN_TOKEN.sub(_speak_latin_v2, t)
+    t = _SPOKEN_V2_NUMBER.sub(lambda m: read_number(m.group()), t)
+    t = re.sub(r'\s*([،,.؟?!])\s*', r'\1 ', t)
+    return re.sub(r'\s+', ' ', t).strip(' ،,')

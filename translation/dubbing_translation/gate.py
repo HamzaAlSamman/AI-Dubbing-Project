@@ -28,8 +28,8 @@ def numbers(text):
     return sorted(_NUMBER.findall((text or '').translate(_AR_DIGITS)))
 
 
-def spoken_letters(text):
-    return n_letters(tts_text(text))
+def spoken_letters(text, version='v1'):
+    return n_letters(tts_text(text, version=version))
 
 
 def mechanical_issues(source, arabic):
@@ -51,7 +51,8 @@ def evaluate(text, source, window, *, qe, misspelled_words, cfg, allowlist=froze
     spelling_rate = len(bad) / max(1, len(toks))
     # Duration is predicted on what the voice will actually say: variables and symbols are
     # spoken as Arabic words (x -> إكس), so they take time although they are not Arabic letters.
-    spoken = spoken_letters(text) if cfg['voice'].get('count_spoken_form', True) else n_letters(text)
+    spoken = (spoken_letters(text, cfg['voice'].get('spoken_version', 'v1'))
+              if cfg['voice'].get('count_spoken_form', True) else n_letters(text))
     dur = duration_verdict(spoken, window, rate, min_ratio=gate['min_ratio'],
                            max_speedup=gate['max_speedup'])
     reasons = []

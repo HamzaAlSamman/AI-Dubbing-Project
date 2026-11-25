@@ -10,6 +10,9 @@ letters_per_second = 10.584
 # Predict duration on the spoken form (variables spelled in Arabic, digits as words) instead of
 # the written Arabic letters only; the written form undercounts notation-heavy units.
 count_spoken_form = true
+# v2 = deterministic number reader + pronunciation lexicon (same spoken text in every environment).
+# V1 keeps the original reader (absent key = "v1") so its results reproduce.
+spoken_version = "v2"
 
 [budget]
 # Letter range asked from the length-controlled LLM: [low x slot, high x window] at the voice rate.
