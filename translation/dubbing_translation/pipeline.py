@@ -286,7 +286,8 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
 
 # ------------------------------------------------------------------ 4. run
 def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client=None, rank_client=None,
-        glossary_client=None, course_memory=None, video_id=None, repo_dir=None, run_label='', log=print):
+        glossary_client=None, course_memory=None, video_id=None, repo_dir=None, run_label='', environment=None,
+        log=print):
     """glossary_client: LLM that builds the glossary of the video when [language] glossary = "auto..."
     (defaults to the refine client).
     course_memory: path of the course's terminology memory (JSON shared by all videos of a course);
@@ -326,6 +327,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                 'ranker': None if rank_client is None else f'{rank_client.provider}:{rank_client.model}',
                 'windows': {u: w.as_dict() for u, w in windows.items()}, 'human_review': 'none',
                 'source_preparation': source_prep,
+                'environment': environment,             # preflight report: package versions, GPU, python
                 'language': None if language is None else {
                     'name': language.name, 'modes': language.modes,
                     'glossary_terms': len(language.glossary.terms) if language.glossary else 0,

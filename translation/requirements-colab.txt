@@ -1,0 +1,13 @@
+# Translation step on Google Colab (T4). Installed by notebooks/02_translation_v2_colab.ipynb, cell 1.
+# torch / CUDA come from the Colab image and are NOT reinstalled (a reinstall would download >2 GB and
+# may break the CUDA build). The preflight cell records the installed versions in the run manifest.
+#
+# Verified together: transformers 5.24.0 with HY-MT1.5-7B and Hy-MT2-7B in 4-bit on Kaggle
+#   (run ev_20261124T062600Z_wmt24pp_speech, torch 2.11.0+cu130).
+# Not yet verified on the Colab image itself: run the preflight cell; the first V2 smoke test is the check.
+transformers==5.24.0
+accelerate>=1.0,<2
+bitsandbytes>=0.46,<1
+google-genai>=1.30,<4
+sentencepiece>=0.2,<0.3
+sacrebleu==2.6.0

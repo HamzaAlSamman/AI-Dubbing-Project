@@ -66,6 +66,11 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
 
     def _target():
         try:
+            from .preflight import preflight, requirements_for
+            env_report = preflight(requirements_for(use_hymt=use_hymt, hf_models=hf_models, use_llm=use_llm,
+                                                    refine=refine, rank=rank, language=bool(cfg.get('language'))),
+                                   write_dir=work)               # fails before any model is loaded
+            log('[preflight] ok: ' + ', '.join(f'{k} {v}' for k, v in env_report['versions'].items()))
             m = cfg['models']
             gens = [Replay(folder, f'replay_{name}') for name, folder in (replay or {}).items()]
             if use_hymt:
@@ -95,7 +100,8 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
                                    timeout_s=m.get('llm_timeout_s', 180))
             run_path, final, metrics = run(tasks, windows, cfg, work, generators=gens, qe=qe, speller=Hunspell(),
                                            refine_client=client, rank_client=ranker, repo_dir=repo, run_label=label,
-                                           course_memory=course_memory, video_id=run_dir.name, log=log)
+                                           course_memory=course_memory, video_id=run_dir.name,
+                                           environment=env_report, log=log)
             metric.close()
             job['result'] = {'run_dir': str(run_path), 'metrics': metrics}
         except Exception as exc:                     # noqa: BLE001 - reported to the notebook
