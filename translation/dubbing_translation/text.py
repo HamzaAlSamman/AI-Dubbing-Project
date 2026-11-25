@@ -49,14 +49,19 @@ _FILLER_PAIRS = (
 )
 
 
+# full-width / CJK punctuation some models emit inside Arabic text
+_PUNCT = str.maketrans({'，': '،', '；': '؛', '：': ':', '？': '؟', '！': '!', '（': '(', '）': ')'})
+
+
 def clean_translation(text):
     """Deterministic cleanup applied to every candidate before scoring.
 
     - code fences / surrounding quotes from chatty models
     - backticks and quotes around variables (`x`, “Y”) -> plain x, Y
     - doubled discourse openers ("إذًا، إذا ...") that cost time and sound redundant
+    - full-width punctuation ("，") -> Arabic punctuation
     """
-    t = (text or '').strip()
+    t = (text or '').translate(_PUNCT).strip()
     if t.startswith('```'):
         t = re.sub(r'^```\w*\s*', '', t).rsplit('```', 1)[0].strip()
     if len(t) > 2 and t[0] in '"“«' and t[-1] in '"”»':

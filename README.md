@@ -11,7 +11,7 @@
 | المجلد | المحتوى | الحالة |
 |---|---|---|
 | [`translation/`](translation/README.md) | خطوة الترجمة للدبلجة: المولّدات، والبوابة، والتصحيح، والترتيب، والتقييم، وتتبّع التجارب | **الإصدار الحالي** |
-| [`translation/notebooks/`](translation/notebooks/) | دفتر Colab لتقييم المحاضرة (بيانات خاصة على Drive) | جاهز |
+| [`translation/notebooks/`](translation/notebooks/) | دفاتر Colab: تقييم المحاضرة، وتشغيل V2 (بيانات خاصة على Drive) | جاهز |
 | [`translation/kaggle/`](translation/kaggle/) | دفتر Kaggle للمعيار المرجعي العام WMT24++ | جاهز |
 | [`translation/docs/`](translation/docs/) | المنهجية، والتقييم، وقرار الـ fine-tuning، والمراجع | محدَّث |
 | `arabic_dubbing_v2/`، `tests/`، `docs/`، `examples/`، `notebooks/` | الحزمة الأولى: عقد البيانات، وبناء الوحدات، والقاموس، وخطط الترجمة | سابقة، تبقى للمرجعية |
@@ -25,6 +25,7 @@
 5. **الصوت:** Habibi TTS وفحص Whisper في دفتر Colab الرئيسي (الأقسام 18–19).
 
 المعايير والنتائج وما تبقى: [`translation/docs/EVALUATION.md`](translation/docs/EVALUATION.md).
+الترجمة V2 (فصحى مبسّطة، قاموس مصطلحات يبنيه النموذج لكل فيديو، تحرير لغوي محروس): [`translation/docs/TRANSLATION_V2.md`](translation/docs/TRANSLATION_V2.md)، والدفتر [`02_translation_v2_colab.ipynb`](translation/notebooks/02_translation_v2_colab.ipynb).
 الاختبارات: `python -m unittest discover -s translation/tests` و`python -m unittest discover -s tests` (بلا نماذج ولا إنترنت).
 
 ---

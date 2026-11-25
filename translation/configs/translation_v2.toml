@@ -1,0 +1,79 @@
+# Translation step configuration (v2 = v1 + language policy, LLM-built glossary, polish). Every value here is copied into the run manifest and
+# hashed: two runs with the same config hash used exactly the same settings.
+
+[voice]
+# Speaking rate of the TTS voice in Arabic letters per second (diacritics, spaces, punctuation
+# not counted). Measured on 123 natural-speed Habibi MSA clips, 2026-11-16 (cell 19.1).
+# Predictor vs real clips: median abs error 10.9 %, same fits/overrun verdict in 84.6 %.
+name = "habibi_msa"
+letters_per_second = 10.584
+# Predict duration on the spoken form (variables spelled in Arabic, digits as words) instead of
+# the written Arabic letters only; the written form undercounts notation-heavy units.
+count_spoken_form = true
+
+[budget]
+# Letter range asked from the length-controlled LLM: [low x slot, high x window] at the voice rate.
+low = 0.90
+high = 1.05
+short_factor = 0.80          # the 'short' variant aims at 80 % of the maximum
+
+[gate]
+qe_max = 5.0                 # MetricX-24 QE (0 best .. 25 worst)
+spelling_max = 0.05          # share of misspelled Arabic words (allow-listed terms excluded)
+min_ratio = 0.60             # predicted / slot below this = too short (long silence)
+max_speedup = 1.25           # bounded speed-up allowed by the audio stage
+tiny_slot_s = 2.0            # slots shorter than this get a merge hint when they overrun
+spelling_allowlist = []      # extra accepted technical words (consensus words are added automatically)
+qe_segment_min_words = 60    # units with >= this many source words are QE-scored sentence by sentence (0 = off)
+
+[refine]
+enabled = true
+max_attempts = 3
+drafts_shown = 2
+max_qe_worse = 0.5           # duration-only edits may not lose more than this much QE
+
+[rank]
+# Second-stage choice among the accepted candidates: MetricX shortlists (top_k by QE), an LLM scores
+# adequacy and fluency blind (sense errors, agreement, dropped phrases that MetricX misses).
+# 2026-11-20 independent judge (nemotron-3-ultra) found such errors in MetricX-only picks.
+enabled = true
+top_k = 4
+adequacy_weight = 2.0        # score = 2 x adequacy + fluency
+provider = "gemini"
+model = "gemini-3.5-flash-lite"
+
+[models]
+qe = "google/metricx-24-hybrid-large-v2p6"
+mt = "tencent/HY-MT1.5-7B"
+llm_provider = "gemini"
+llm_model = "gemini-3.5-flash-lite"
+llm_min_interval_s = 4.5     # free tier: stays under the per-minute limit
+# Refiner for the few units no candidate passes. 2026-11-20: flash-lite fixed 1 of 7 such units;
+# gemini-3.5-flash fixed 0 of 6 (MetricX stayed 5-10 on long/fragment/notation units) and its free
+# daily quota ended after 19 calls, so the lite model stays the default.
+refine_provider = "gemini"
+refine_model = "gemini-3.5-flash-lite"
+refine_min_interval_s = 4.5
+llm_timeout_s = 180
+
+[language]
+# Simple-MSA policy (dialect words reject, stiff translation patterns are flagged) and the glossary.
+# glossary = "auto"                 : the LLM builds the glossary of each video from its whole transcript
+#                                     before translation (terminology agent; cached; reviewable)
+# glossary = "auto+glossaries/x.toml": the same, plus a reviewed file whose terms win
+# glossary = "glossaries/x.toml"    : a fixed, reviewed file only
+policy = "language/msa_simple_v1.toml"
+glossary = "auto"
+terminology = "reject"       # reject | flag | off : approved term missing in a candidate
+dialect = "reject"
+calques = "flag"             # stiff patterns: flagged, then removed by the guarded polish step
+
+[polish]
+# Dubbing adaptation of an accepted line that still has stiff patterns: one LLM edit, kept only if it
+# passes the whole gate, has fewer findings, and MetricX is not worse by more than max_qe_worse.
+enabled = true
+max_qe_worse = 0.5
+
+[tracking]
+mlflow = false               # registry.jsonl is always written; set true to mirror runs into MLflow
+experiment = "translation_step"

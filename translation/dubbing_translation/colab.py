@@ -68,13 +68,14 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             m = cfg['models']
             gens = [Replay(folder, f'replay_{name}') for name, folder in (replay or {}).items()]
             if use_hymt:
-                gens.append(HyMT(m['mt']))
+                gens.append(HyMT(m['mt'], language_aware=bool(cfg.get('language'))))
             for model_id, template, samples, *extra in hf_models:      # optional 4th item: HFChatMT kwargs
                 gens.append(HFChatMT(model_id, template, samples=samples, **(extra[0] if extra else {})))
             if use_llm:
                 gens.append(IsometricLLM(LLMClient(m['llm_provider'], m['llm_model'],
                                                    min_interval_s=m['llm_min_interval_s'],
-                                                   timeout_s=m.get('llm_timeout_s', 180))))
+                                                   timeout_s=m.get('llm_timeout_s', 180)),
+                                     language_aware=bool(cfg.get('language'))))
             client = refine_client(m) if refine else None
             if not refine:
                 cfg['refine']['enabled'] = False
@@ -172,3 +173,31 @@ def format_table(summary):
     for name, s in sorted(summary.items(), key=lambda kv: -kv[1]['gate_accept_pct']):
         lines.append(f'| {name} | ' + ' | '.join(str(s.get(k)) for k, _ in cols) + ' |')
     return '\n'.join(lines)
+
+
+def compare_v1_v2(run_dir, v2_run, *, work_subdir='translation_step', v1_glob='*final_v1*'):
+    """V1 (final_v1) vs a V2 run on the same lecture: acceptance, MetricX QE, and the language findings of
+    the delivered lines, both measured with the V2 run's own glossary and policy."""
+    import statistics
+    from .common import read_json
+    from .language import Glossary, Language, Policy
+    runs = Path(run_dir) / work_subdir / 'runs'
+    v1_dir = sorted(runs.glob(v1_glob))[-1]
+    v2_dir = Path(v2_run)
+    cfg = read_json(v2_dir / 'manifest.json')['config']
+    g = read_json(v2_dir / 'glossary.json') if (v2_dir / 'glossary.json').exists() else None
+    glossary = Glossary({'version': g['version'], 'term': g['terms']}) if g else None
+    lang = Language(Policy.load(cfg['language']['policy']), glossary)
+    table = {}
+    for name, d in (('V1 final_v1', v1_dir), ('V2', v2_dir)):
+        units = read_json(d / 'translation_final.json')['units']
+        found = [lang.check(u['source_text'], u.get('natural_ar') or '') for u in units]
+        qes = [u['qe'] for u in units if u.get('qe') is not None]
+        table[name] = {'run': d.name, 'units': len(units),
+                       'accepted_pct': round(100 * sum(u['status'].startswith('accepted') for u in units) / len(units), 1),
+                       'qe_mean': round(statistics.mean(qes), 3) if qes else None,
+                       'term_missing_units': sum(bool(f['terms']) for f in found),
+                       'stiff_pattern_units': sum(bool(f['calques']) for f in found),
+                       'dialect_units': sum(bool(f['dialect']) for f in found),
+                       'polished_units': sum(bool(u.get('polished_from')) for u in units)}
+    return table

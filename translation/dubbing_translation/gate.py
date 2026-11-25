@@ -6,6 +6,8 @@ A candidate is ACCEPTED when all checks pass:
   spelling      : misspelled-word rate <= spelling_max (technical terms on the allow-list excluded)
   mechanical    : numbers and negation of the source are kept
   duration      : predicted speech fits its window (natural or with bounded speed-up)
+  language (V2) : glossary terms use their approved rendering, no dialect words (language.py);
+                  stiff translation patterns are recorded as style flags
 Thresholds are heuristics documented in the config and the run manifest; they are not
 calibrated against human judgements.
 """
@@ -41,7 +43,7 @@ def mechanical_issues(source, arabic):
     return issues
 
 
-def evaluate(text, source, window, *, qe, misspelled_words, cfg, allowlist=frozenset()):
+def evaluate(text, source, window, *, qe, misspelled_words, cfg, allowlist=frozenset(), language=None):
     """Return a dict with every measurement and the list of failed checks ('reasons')."""
     gate, rate = cfg['gate'], cfg['voice']['letters_per_second']
     toks = ar_tokens(text)
@@ -61,9 +63,12 @@ def evaluate(text, source, window, *, qe, misspelled_words, cfg, allowlist=froze
     reasons += mechanical_issues(source, text)
     if dur['zone'] in ('too_long', 'too_short'):
         reasons.append('duration_' + dur['zone'])
+    found = language.check(source, text) if language is not None else {'terms': [], 'dialect': [], 'calques': []}
+    if language is not None:
+        reasons += language.reasons(found)
     return {'qe': None if qe is None else round(qe, 3), 'spelling_rate': round(spelling_rate, 3),
             'misspelled': bad, 'letters': n_letters(text), 'spoken_letters': spoken, **dur, 'reasons': reasons,
-            'accepted': not reasons}
+            'language': found, 'style_flags': len(found['calques']), 'accepted': not reasons}
 
 
 def only_duration_failed(result):
@@ -71,7 +76,8 @@ def only_duration_failed(result):
 
 
 def rank_key(result):
-    """Among accepted candidates: best QE; prefer no speed-up; then closest to a full slot."""
+    """Among accepted candidates: best QE; prefer no speed-up; then closest to a full slot.
+    (Style flags are judged by the LLM ranker and the polish step, not by this MetricX order.)"""
     return (result['qe'] if result['qe'] is not None else 99.0,
             result['zone'] == 'speedup',
             abs(1.0 - result['ratio_slot']))

@@ -11,6 +11,7 @@ except ModuleNotFoundError:          # Python < 3.11
     tomllib = None
 
 DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / 'configs' / 'translation_v1.toml'
+V2_CONFIG = DEFAULT_CONFIG.with_name('translation_v2.toml')     # + language policy, auto glossary, polish
 
 
 def load_config(path=DEFAULT_CONFIG, **overrides):

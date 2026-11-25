@@ -14,7 +14,7 @@ import re
 import time
 from pathlib import Path
 
-from .prompts import ISOMETRIC_SYSTEM, ISOMETRIC_VERSION
+from .prompts import ISOMETRIC_SYSTEM, ISOMETRIC_V2_SYSTEM, ISOMETRIC_V2_VERSION, ISOMETRIC_VERSION
 
 
 class QuotaExhausted(RuntimeError):
@@ -124,18 +124,24 @@ class IsometricLLM:
 
     uses_budget = True
 
-    def __init__(self, client):
-        self.client = client
-        self.name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{ISOMETRIC_VERSION}'
+    def __init__(self, client, *, language_aware=False):
+        """language_aware: V2 prompt that also receives the style rules and the glossary lines of the
+        unit (task['language_block'], set by the pipeline when the run has a [language] section)."""
+        self.client, self.language_aware = client, language_aware
+        version = ISOMETRIC_V2_VERSION if language_aware else ISOMETRIC_VERSION
+        self.system = ISOMETRIC_V2_SYSTEM if language_aware else ISOMETRIC_SYSTEM
+        self.name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{version}'
 
     def generate(self, task, budget):
-        user = json.dumps({'context_before': task.get('context_before') or [],
-                           'current_unit': task['source_text'],
-                           'context_after': task.get('context_after') or [],
-                           'slot_seconds': round(task['slot_s'], 1),
-                           'target_letters_min': budget['min'], 'target_letters_max': budget['max'],
-                           'short_letters': budget['short']}, ensure_ascii=False)
-        obj = self.client.chat_json(ISOMETRIC_SYSTEM, user) or {}
+        payload = {'context_before': task.get('context_before') or [],
+                   'current_unit': task['source_text'],
+                   'context_after': task.get('context_after') or [],
+                   'slot_seconds': round(task['slot_s'], 1),
+                   'target_letters_min': budget['min'], 'target_letters_max': budget['max'],
+                   'short_letters': budget['short']}
+        if self.language_aware:
+            payload.update(task.get('language_block') or {})
+        obj = self.client.chat_json(self.system, json.dumps(payload, ensure_ascii=False)) or {}
         return [{'text': obj[k].strip(), 'variant': k} for k in ('fit', 'short')
                 if isinstance(obj.get(k), str) and obj[k].strip()]
 
@@ -145,12 +151,22 @@ class HyMT:
     template the 7B model sometimes translated the context too). 4-bit on a Colab T4/L4."""
 
     PROMPT = 'Translate the following segment into Arabic, without additional explanation.\n\n{src}'
+    # official terminology-intervention template of the model card (Chinese instruction, one line per term)
+    TERMS_PROMPT = ('参考下面的翻译：\n{terms}\n\n将以下文本翻译为阿拉伯语，注意只需要输出翻译后的结果，不要额外解释：\n{src}')
     uses_budget = False
 
-    def __init__(self, model_id='tencent/HY-MT1.5-7B', load_in_4bit=True):
-        self.model_id, self.load_in_4bit = model_id, load_in_4bit
-        self.name = model_id.replace('/', '_') + '__plain_v1'
+    def __init__(self, model_id='tencent/HY-MT1.5-7B', load_in_4bit=True, *, language_aware=False):
+        """language_aware: when the unit has glossary terms (task['term_pairs']), use the terminology template."""
+        self.model_id, self.load_in_4bit, self.language_aware = model_id, load_in_4bit, language_aware
+        self.name = model_id.replace('/', '_') + ('__terms_v1' if language_aware else '__plain_v1')
         self._tok = self._model = None
+
+    def prompt(self, task):
+        pairs = (task.get('term_pairs') or []) if self.language_aware else []
+        if pairs:
+            terms = '\n'.join(f'{en} 翻译成 {ar}' for en, ar in pairs)
+            return self.TERMS_PROMPT.format(terms=terms, src=task['source_text'])
+        return self.PROMPT.format(src=task['source_text'])
 
     def _load(self):
         import torch
@@ -166,7 +182,7 @@ class HyMT:
         import torch
         if self._model is None:
             self._load()
-        enc = self._tok.apply_chat_template([{'role': 'user', 'content': self.PROMPT.format(src=task['source_text'])}],
+        enc = self._tok.apply_chat_template([{'role': 'user', 'content': self.prompt(task)}],
                                             add_generation_prompt=True, return_tensors='pt', return_dict=True)
         with torch.inference_mode():
             out = self._model.generate(input_ids=enc['input_ids'].to(self._model.device),
@@ -209,6 +225,10 @@ class HFChatMT:
         # general chat LLMs (Qwen3, Jais-3, ...): plain instruction, MSA explicitly
         'msa_plain': ('Translate the following English text into Modern Standard Arabic. Output only the '
                       'Arabic translation, without explanations, notes or transliteration.\n\n{src}'),
+        # V2: Hy-MT2 instruction with the unit's glossary terms (falls back to 'hy_mt2' when there are none)
+        'hy_mt2_terms': ('Translate the following text into Modern Standard Arabic. Use these translations for '
+                         'the terms:\n{terms}\nNote that you should only output the translated result without any '
+                         'additional explanation:\n\n{src}'),
     }
 
     def __init__(self, model_id, template='hy_mt2', *, samples=1, load_in_4bit=True, seed=0,
@@ -221,6 +241,7 @@ class HFChatMT:
         self.trust_remote_code, self.template_kwargs = trust_remote_code, dict(template_kwargs or {})
         self.load_in_4bit, self.seed, self.compute_dtype = load_in_4bit, seed, compute_dtype
         self.sampling = sampling or {'temperature': 0.7, 'top_p': 0.6, 'top_k': 20, 'repetition_penalty': 1.05}
+        self.language_aware = template.endswith('_terms')
         self.name = f'{model_id.replace("/", "_")}__{template}_g1s{samples}' + (
             '' if compute_dtype == 'float16' else f'_{compute_dtype}')
         self._tok = self._model = None
@@ -252,7 +273,13 @@ class HFChatMT:
         import torch
         if self._model is None:
             self._load()
-        prompt = self.TEMPLATES[self.template].format(src=task['source_text'])
+        if self.template.endswith('_terms'):
+            pairs = task.get('term_pairs') or []
+            prompt = (self.TEMPLATES[self.template].format(terms='\n'.join(f'{en} -> {ar}' for en, ar in pairs),
+                                                           src=task['source_text']) if pairs else
+                      self.TEMPLATES[self.template[:-len('_terms')]].format(src=task['source_text']))
+        else:
+            prompt = self.TEMPLATES[self.template].format(src=task['source_text'])
         enc = self._tok.apply_chat_template([{'role': 'user', 'content': prompt}], add_generation_prompt=True,
                                             return_tensors='pt', return_dict=True, **self.template_kwargs)
         items = []

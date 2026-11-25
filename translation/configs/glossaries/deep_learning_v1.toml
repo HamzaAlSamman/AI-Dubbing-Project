@@ -1,0 +1,148 @@
+# OPTIONAL reviewed glossary for the deep-learning course (first lecture: logistic regression notation).
+# The default V2 config builds the glossary of every video automatically (glossary = "auto"); this file
+# is a human-reviewed example to merge on top: glossary = "auto+glossaries/deep_learning_v1.toml"
+# (its terms win). One approved Arabic rendering per English term.
+#
+#   en      : English forms; plain phrases match whole words (an optional plural "s"/"es" is allowed);
+#             "re:" prefix = a regular expression (case-insensitive).
+#   ar      : the approved rendering shown to the models.
+#   require : the translation must contain ALL of these stems (after normalisation: no diacritics,
+#             أ/إ/آ -> ا, ى -> ي, ة -> ه). "a|b" means either stem. Stems keep matching lenient
+#             (prefixes, plural, definite article).
+#   avoid   : renderings seen in earlier runs that are wrong or inconsistent; listed in the hint.
+#
+# Review note: chosen from the renderings our candidates already used most, and checked against
+# common Arabic ML usage. A human reviewer approves the list once per course.
+
+version = "deep_learning_v1"
+
+[[term]]
+id = "neural_network"
+en = ["neural network", "neural net"]
+ar = "شبكة عصبية"
+require = ["شبك", "عصبي"]
+
+[[term]]
+id = "training_set"
+en = ["training set", "train set"]
+ar = "مجموعة التدريب"
+require = ["مجموع", "تدريب"]
+avoid = ["مجموعة تدريبية"]
+
+[[term]]
+id = "training_example"
+en = ["training example", "train example"]
+ar = "مثال تدريب (أمثلة التدريب)"
+require = ["مثال|امثله", "تدريب"]
+
+[[term]]
+id = "test_set"
+en = ["test set"]
+ar = "مجموعة الاختبار"
+require = ["مجموع", "اختبار"]
+
+[[term]]
+id = "label"
+en = ["label"]
+ar = "تسمية (التسميات)"
+require = ["تسمي"]
+avoid = ["الوسم", "التصنيف"]
+
+[[term]]
+id = "feature_vector"
+en = ["feature vector"]
+ar = "متجه الخصائص"
+require = ["متجه", "خصائص"]
+avoid = ["متجه الميزات", "متجه السمات"]
+
+[[term]]
+id = "logistic_regression"
+en = ["logistic regression"]
+ar = "الانحدار اللوجستي"
+require = ["انحدار", "لوجست"]
+
+[[term]]
+id = "binary_classification"
+en = ["binary classification"]
+ar = "التصنيف الثنائي"
+require = ["تصنيف", "ثنائي"]
+
+[[term]]
+id = "classifier"
+en = ["classifier"]
+ar = "مصنِّف"
+require = ["مصنف"]
+
+[[term]]
+id = "forward_propagation"
+en = ["forward propagation", "forward pass"]
+ar = "الانتشار الأمامي"
+require = ["انتشار", "امامي"]
+
+[[term]]
+id = "backward_propagation"
+en = ["backward propagation", "backward pass", "backpropagation", "back propagation"]
+ar = "الانتشار الخلفي"
+require = ["انتشار", "خلفي"]
+
+[[term]]
+id = "matrix"
+en = ["matrix", "matrices"]
+ar = "مصفوفة (مصفوفات)"
+require = ["مصفوف"]
+
+[[term]]
+id = "pixel"
+en = ["pixel"]
+ar = "بكسل (البكسلات)"
+require = ["بكسل"]
+
+[[term]]
+id = "notation"
+en = ["notation"]
+ar = "الرموز"
+require = ["رموز|رمز|ترميز"]
+
+[[term]]
+id = "capital_letter"
+en = ["re:\\b(?:capital|upper ?case)\\s+[A-Za-z]\\b"]
+ar = "X الكبيرة (حرف كبير، لا «رأس المال»)"
+require = ["كبير"]
+avoid = ["رأس المال", "المصفوفة الأساسية"]
+
+[[term]]
+id = "lowercase_letter"
+en = ["re:\\blower ?case\\s+[A-Za-z]\\b"]
+ar = "m الصغيرة (حرف صغير)"
+require = ["صغير"]
+
+[[term]]
+id = "transpose"
+en = ["transpose"]
+ar = "منقول (منقول x1)"
+require = ["منقول|مبدل"]
+avoid = ["التبديل"]
+
+[[term]]
+id = "column"
+en = ["column"]
+ar = "عمود (أعمدة)"
+require = ["عمود|اعمده"]
+
+[[term]]
+id = "for_loop"
+en = ["for loop", "for-loop"]
+ar = "حلقة for (حلقة تكرار)"
+require = ["حلق"]
+
+[[term]]
+id = "algorithm"
+en = ["algorithm"]
+ar = "خوارزمية"
+require = ["خوارزمي"]
+
+[[term]]
+id = "python"
+en = ["python"]
+ar = "بايثون"
+require = ["بايثون|python"]

@@ -1,0 +1,72 @@
+# Language policy for the Arabic voice-over: simple, natural Modern Standard Arabic.
+# Project decision (FigJam board, «سياسة اللغة قبل البدء»): educational courses are dubbed into
+# simplified MSA for a broad audience. Netflix's Arabic style guide states the same rule for MSA
+# work: no dialect words; use the closest MSA equivalent.
+# Every value here is hashed into the run manifest; changing a list means a new version string.
+
+version = "msa_simple_v1"
+
+# Short rules shown to every LLM step (generation, refine, rank, polish).
+rules = [
+  "Simple, natural Modern Standard Arabic for a spoken lecture; never dialect (no شو، هيك، مش، عشان، إيه، اللي).",
+  "Prefer short direct verbs over stiff translation patterns: «يخزّن» not «يقوم بتخزين»، «سنعرّف» not «ما سنفعله هو تعريف».",
+  "Avoid filler calques: «يتضح أنه» (it turns out), «عبارة عن», «مع بعضها».",
+  "Correct agreement: «الدورة» is feminine (هذه الدورة), «مجموعة» takes a feminine verb (تتكوّن مجموعة).",
+  "Use the glossary renderings for every technical term, the same way in every sentence.",
+  "Variables, symbols and code stay as plain Latin text (x, nx, Y, x.shape); numbers as digits.",
+]
+
+# Words that only occur in dialects (Levantine, Egyptian, Gulf). One hit rejects a candidate.
+dialect_words = [
+  "شو", "ليش", "هيك", "هلق", "هلأ", "بدي", "بدك", "بدو", "بدها", "منيح", "كتير", "هاد", "هادا", "هاي", "هيدا",
+  "هيدي", "تبع", "تبعي", "تبعك", "لسا", "لسه", "هون", "هنيك", "إمتى", "امتى",
+  "إيه", "ازاي", "إزاي", "دلوقتي", "كده", "كدا", "بتاع", "بتاعة", "عايز", "عاوز", "عايزة", "فين", "ليه", "مش",
+  "برضه", "أوي", "اوي", "وش", "شلون", "عشان", "علشان", "اللي", "إللي", "وايد",
+]
+
+# Translationese that is grammatical but stiff when spoken. Reported as style flags (not a rejection
+# by default); the polish step and the ranker try to remove them.
+[[calque]]
+id = "yaqum_bi"
+pattern = "(?:^|\\s)(?:ي|ت|ن|أ|سي|ست|سن|سأ)قوم(?:ون|ان)?\\s+(?:[^\\s،.]+\\s+){0,2}?ب[^\\s،.]{3,}"
+hint = "use the verb directly (يخزّن، نعرّف) instead of «يقوم بـ + مصدر»"
+
+[[calque]]
+id = "yatadih_annahu"
+pattern = "(?:ي|ا)تضح\\s+أن"
+hint = "«يتضح أن/اتضح أن» renders 'it turns out'; drop it or use «في الواقع»"
+
+[[calque]]
+id = "ma_sanafaluhu"
+pattern = "ما\\s+(?:سن|ن|سأ|أ)فعله\\s+هو"
+hint = "«ما سنفعله هو …» is a calque of 'what we're going to do is'; say «سنـ…» directly"
+
+[[calque]]
+id = "ibara_an"
+pattern = "عبارة\\s+عن"
+hint = "«عبارة عن» is filler; write «هو/هي» or nothing"
+
+[[calque]]
+id = "maa_badiha"
+pattern = "مع\\s+بعضها"
+hint = "«مع بعضها» is colloquial; use «معًا» or «بعضها ببعض»"
+
+[[calque]]
+id = "yatahassal"
+pattern = "يتحصل"
+hint = "«يتحصّل» is unusual in MSA; use «نحصل/يحصل»"
+
+# Subject-independent notation terms for technical lectures. They are added to every glossary (the
+# video's own glossary wins on overlap). Earlier runs rendered "capital Y" as «رأس المال Y».
+[[term]]
+id = "capital_letter"
+en = ["re:\\b(?:capital|upper ?case)\\s+[A-Za-z]\\b"]
+ar = "حرف كبير (X الكبيرة)"
+require = ["كبير"]
+avoid = ["رأس المال"]
+
+[[term]]
+id = "lowercase_letter"
+en = ["re:\\blower ?case\\s+[A-Za-z]\\b"]
+ar = "حرف صغير (m الصغيرة)"
+require = ["صغير"]
