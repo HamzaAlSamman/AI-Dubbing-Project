@@ -389,7 +389,7 @@ class SourceNumberTests(unittest.TestCase):
         'Pi is about 3.14 and e is about 2.718.',
         'We set y = 2x + 1, then x = -5.',
         'Install version 1.2.3 or 10.0.1 of the library.',
-        'which in this case turns out to be 1, 2, 2, 8, 8.',
+        'which in this example comes to 1, 2, 2, 8, 8.',
         'The dates 2026-11-25 and 25/11/2026 are the same day.',
         'Use 1,000,000 samples, 50% of them for training.',
     ]
@@ -408,7 +408,7 @@ class SourceNumberTests(unittest.TestCase):
             self.assertNotIn('source_text_asr', tasks[0])
 
     def test_suspected_spelled_number_is_only_flagged(self):
-        _, _, rep = self._prepare('which in this case turns out to be 1, 2, 2, 8, 8.')
+        _, _, rep = self._prepare('which in this example comes to 1, 2, 2, 8, 8.')
         self.assertEqual(rep['spelled_digit_flags']['u0'], ['1, 2, 2, 8, 8'])
         _, _, rep = self._prepare('Pi is about 3.14 and e is about 2.718.')
         self.assertEqual(rep['spelled_digit_flags'], {})
@@ -433,7 +433,7 @@ class SafeMergeTests(unittest.TestCase):
         return merge_fragments(tasks, windows, timings=timings)
 
     def test_clear_continuation_is_merged_without_losing_words(self):
-        a, b = 'So if you take X1 and', 'you know, put that as the first column.'
+        a, b = 'So if you add A1 and', 'you see, put that as the first row.'
         tasks, windows, merges, suspects = self._merge(a, b)
         self.assertEqual([t['unit_id'] for t in tasks], ['a+b'])
         self.assertEqual(tasks[0]['source_text'].split(), a.split() + b.split())
@@ -448,14 +448,14 @@ class SafeMergeTests(unittest.TestCase):
         self.assertEqual(suspects[0]['units'], ['a', 'b'])
 
     def test_one_signal_only_is_a_suspect_not_a_merge(self):
-        for a, b in (('if this image is a 64 by 64 image,', 'The total dimension of x is 12288.'),
-                     ('stack the examples, x1 transpose down to xm.', 'transpose, but it turns out that this helps.')):
+        for a, b in (('if this picture is a 32 by 32 picture,', 'The total size of v is 3072.'),
+                     ('stack the rows, a1 transpose down to an.', 'transpose, but it happens that this helps.')):
             tasks, _, merges, suspects = self._merge(a, b)
             self.assertEqual(len(tasks), 2, a)
             self.assertEqual(len(suspects), 1, a)
 
     def test_long_pause_blocks_the_merge(self):
-        tasks, _, merges, suspects = self._merge('So if you take X1 and', 'you know, put that first.', gap=2.5)
+        tasks, _, merges, suspects = self._merge('So if you add A1 and', 'you see, put that first.', gap=2.5)
         self.assertEqual(len(tasks), 2)
         self.assertIn('pause', suspects[0]['reason'])
 
@@ -698,8 +698,8 @@ class SourceProvenanceTests(unittest.TestCase):
         from test_translation_step import FakeQE, FakeSpeller, FixedGen
         cfg = load_config(V2_CONFIG)
         cfg['language'] = {}                                           # no LLM needed for this check
-        tasks = [{'unit_id': 'a', 'source_text': 'So if you take X1 and'},
-                 {'unit_id': 'b', 'source_text': 'you know, put that first.'}]
+        tasks = [{'unit_id': 'a', 'source_text': 'So if you add A1 and'},
+                 {'unit_id': 'b', 'source_text': 'you see, put that first.'}]
         windows = {'a': Window('a', 2.0, 2.0), 'b': Window('b', 2.0, 2.0)}
         with tempfile.TemporaryDirectory() as tmp:
             run_dir, final, _ = run(tasks, windows, cfg, tmp, generators=[FixedGen('g', {})], qe=FakeQE(),
@@ -809,8 +809,8 @@ class DataContractTests(unittest.TestCase):
         cfg = load_config(V2_CONFIG)
         cfg['language'] = {}
         rate = cfg['voice']['letters_per_second']
-        self.tasks = [{'unit_id': 'a', 'source_text': 'So if you take X1 and', 'context_before': [], 'context_after': []},
-                      {'unit_id': 'b', 'source_text': 'you know, put that first.', 'context_before': [], 'context_after': []},
+        self.tasks = [{'unit_id': 'a', 'source_text': 'So if you add A1 and', 'context_before': [], 'context_after': []},
+                      {'unit_id': 'b', 'source_text': 'you see, put that first.', 'context_before': [], 'context_after': []},
                       {'unit_id': 'c', 'source_text': 'Steps 1, 2, 3, 4 follow.', 'context_before': [], 'context_after': []}]
         self.original = copy.deepcopy(self.tasks)
         windows = {u: Window(u, 2.0, 2.2) for u in 'abc'}
@@ -853,7 +853,7 @@ class DataContractTests(unittest.TestCase):
         merged = self.doc['units'][0]
         self.assertEqual((merged['unit_id'], merged['derived'], merged['merged_from']), ('a+b', True, ['a', 'b']))
         self.assertEqual((merged['start'], merged['end']), (10.0, 14.1))
-        self.assertEqual(merged['source_text'].split(), 'So if you take X1 and you know, put that first.'.split())
+        self.assertEqual(merged['source_text'].split(), 'So if you add A1 and you see, put that first.'.split())
         self.assertFalse(self.doc['units'][1]['derived'])
 
     def test_provenance_and_flags_are_kept(self):
