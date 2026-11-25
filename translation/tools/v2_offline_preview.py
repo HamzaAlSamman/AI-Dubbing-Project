@@ -135,6 +135,7 @@ def main(argv=None):
     dummy = {t['unit_id']: Window(t['unit_id'], 1.0, 1.0) for t in tasks}
     summary['source_preparation'] = {
         'merge_fragments': [m['merged_from'] for m in merge_fragments(tasks, dummy)[2]],
+        'suspected_fragments': merge_fragments(tasks, dummy)[3],
         'spelled_digits': {t['unit_id']: find_spelled_digits(t['source_text']) for t in tasks
                            if find_spelled_digits(t['source_text'])}}
     result = {'created_at': now_iso(), 'run_id': final.get('run_id'), 'glossary_file': str(gpath),

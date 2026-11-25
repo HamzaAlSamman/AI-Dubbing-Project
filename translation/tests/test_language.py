@@ -233,7 +233,7 @@ class SegmentTests(unittest.TestCase):
                  {'unit_id': 'b', 'source_text': 'you know, put that as the first column.'},
                  {'unit_id': 'c', 'source_text': 'Next idea.'}]
         windows = {'a': Window('a', 1.0, 1.2), 'b': Window('b', 3.0, 3.5), 'c': Window('c', 1.0, 1.0)}
-        t, w, merges = merge_fragments(tasks, windows)
+        t, w, merges, _suspects = merge_fragments(tasks, windows)
         self.assertEqual([x['unit_id'] for x in t], ['a+b', 'c'])
         self.assertEqual(t[0]['merged_from'], ['a', 'b'])
         self.assertEqual((w['a+b'].slot_s, w['a+b'].window_s), (4.0, 4.7))

@@ -274,5 +274,44 @@ class SourceNumberTests(unittest.TestCase):
                             {'segmentation': {'fix_spelled_digits': True}})
 
 
+
+# ---------------------------------------------------------------- promoted D: only safe merges
+class SafeMergeTests(unittest.TestCase):
+    def _merge(self, a, b, gap=0.2):
+        from dubbing_translation.segment import merge_fragments
+        from dubbing_translation.timing import Window
+        tasks = [{'unit_id': 'a', 'source_text': a}, {'unit_id': 'b', 'source_text': b}]
+        windows = {'a': Window('a', 2.0, 2.0 + gap), 'b': Window('b', 2.0, 2.0)}
+        timings = {'a': (10.0, 12.0), 'b': (12.0 + gap, 14.0 + gap)}
+        return merge_fragments(tasks, windows, timings=timings)
+
+    def test_clear_continuation_is_merged_without_losing_words(self):
+        a, b = 'So if you take X1 and', 'you know, put that as the first column.'
+        tasks, windows, merges, suspects = self._merge(a, b)
+        self.assertEqual([t['unit_id'] for t in tasks], ['a+b'])
+        self.assertEqual(tasks[0]['source_text'].split(), a.split() + b.split())
+        self.assertEqual(suspects, [])
+        tasks, _, _, _ = self._merge('until we list the red pixels 255, 134,', '255, 134, and so on.')
+        self.assertEqual([t['unit_id'] for t in tasks], ['a+b'])
+
+    def test_sentence_end_followed_by_lower_case_brand_is_not_merged(self):
+        tasks, _, merges, suspects = self._merge('So that is the idea.', 'iPhone apps use this pattern.')
+        self.assertEqual([t['unit_id'] for t in tasks], ['a', 'b'])
+        self.assertEqual(merges, [])
+        self.assertEqual(suspects[0]['units'], ['a', 'b'])
+
+    def test_one_signal_only_is_a_suspect_not_a_merge(self):
+        for a, b in (('if this image is a 64 by 64 image,', 'The total dimension of x is 12288.'),
+                     ('stack the examples, x1 transpose down to xm.', 'transpose, but it turns out that this helps.')):
+            tasks, _, merges, suspects = self._merge(a, b)
+            self.assertEqual(len(tasks), 2, a)
+            self.assertEqual(len(suspects), 1, a)
+
+    def test_long_pause_blocks_the_merge(self):
+        tasks, _, merges, suspects = self._merge('So if you take X1 and', 'you know, put that first.', gap=2.5)
+        self.assertEqual(len(tasks), 2)
+        self.assertIn('pause', suspects[0]['reason'])
+
+
 if __name__ == '__main__':
     unittest.main()
