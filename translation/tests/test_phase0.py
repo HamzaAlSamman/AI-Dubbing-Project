@@ -511,5 +511,31 @@ class SpokenTextTests(unittest.TestCase):
         self.assertEqual(src, 'نستخدم حلقة for و 12288')
 
 
+
+# ---------------------------------------------------------------- promoted C: source provenance
+class SourceProvenanceTests(unittest.TestCase):
+    def test_manifest_has_source_and_prepared_hashes(self):
+        import tempfile
+        from dubbing_translation.common import sha256_json
+        from dubbing_translation.io import V2_CONFIG, load_config
+        from dubbing_translation.pipeline import run
+        from dubbing_translation.timing import Window
+        from test_translation_step import FakeQE, FakeSpeller, FixedGen
+        cfg = load_config(V2_CONFIG)
+        cfg['language'] = {}                                           # no LLM needed for this check
+        tasks = [{'unit_id': 'a', 'source_text': 'So if you take X1 and'},
+                 {'unit_id': 'b', 'source_text': 'you know, put that first.'}]
+        windows = {'a': Window('a', 2.0, 2.0), 'b': Window('b', 2.0, 2.0)}
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir, final, _ = run(tasks, windows, cfg, tmp, generators=[FixedGen('g', {})], qe=FakeQE(),
+                                    speller=FakeSpeller(), log=lambda *_: None)
+            m = json.loads((Path(run_dir) / 'manifest.json').read_text(encoding='utf-8'))
+        src = sha256_json([{k: t[k] for k in ('unit_id', 'source_text')} for t in tasks])
+        self.assertEqual(m['source_tasks_sha256'], src)
+        self.assertNotEqual(m['prepared_tasks_sha256'], src)           # the two units were merged
+        self.assertEqual(m['tasks_sha256'], m['prepared_tasks_sha256'])
+        self.assertEqual([f['unit_id'] for f in final], ['a+b'])
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -331,6 +331,8 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
     video's proposals only after a complete, non-degraded run. video_id names this video there.
     course_memory_snapshot: a saved snapshot file; replays exactly that prior and writes no memory."""
     work_dir = Path(work_dir)
+    source_tasks_hash = sha256_json([{k: t[k] for k in ('unit_id', 'source_text')} for t in tasks])
+    source_units_count = len(tasks)
     tasks, windows, source_prep = prepare_sources(tasks, windows, cfg)     # V2: ASR fragments / spelled digits
     auto_glossary, glossary_path, subject = None, None, None
     stopped, gen_report = {}, {}
@@ -374,7 +376,9 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
     tasks_hash = sha256_json([{k: t[k] for k in ('unit_id', 'source_text')} for t in tasks])
     manifest = {'run_id': run_id, 'created_at': now_iso(), 'package_version': __version__,
                 'git_commit': git_commit(repo_dir) if repo_dir else None, 'config': cfg, 'config_sha256': cfg_hash,
-                'tasks_sha256': tasks_hash, 'units': len(tasks), 'generators': [g.name for g in generators],
+                'tasks_sha256': tasks_hash, 'source_tasks_sha256': source_tasks_hash,
+                'prepared_tasks_sha256': tasks_hash, 'source_units': source_units_count,
+                'units': len(tasks), 'generators': [g.name for g in generators],
                 'qe_metric': qe.name, 'spell_checker': speller.name,
                 'refiner': None if refine_client is None else f'{refine_client.provider}:{refine_client.model}',
                 'ranker': None if rank_client is None else f'{rank_client.provider}:{rank_client.model}',
