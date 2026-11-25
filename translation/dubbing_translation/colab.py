@@ -13,7 +13,7 @@ import traceback
 from pathlib import Path
 
 from .common import sha256_text
-from .io import load_config, load_tasks, load_windows
+from .io import load_config, load_source_timing, load_tasks, load_windows
 
 
 def _seed_from_csv(units_csv, tasks, cache_path, metric_name, min_words=0):
@@ -101,7 +101,9 @@ def start(run_dir, *, work_subdir='translation_step', config=None, replay=None, 
             run_path, final, metrics = run(tasks, windows, cfg, work, generators=gens, qe=qe, speller=Hunspell(),
                                            refine_client=client, rank_client=ranker, repo_dir=repo, run_label=label,
                                            course_memory=course_memory, video_id=run_dir.name,
-                                           environment=env_report, log=log)
+                                           environment=env_report,
+                                           source_timing=load_source_timing(tasks, run_dir / 'master_source_only.json'),
+                                           log=log)
             metric.close()
             job['result'] = {'run_dir': str(run_path), 'metrics': metrics}
         except Exception as exc:                     # noqa: BLE001 - reported to the notebook

@@ -47,6 +47,24 @@ def _unit_times(unit):
     return (float(start), float(end)) if start is not None and end is not None else None
 
 
+def load_source_timing(tasks, master_path=None):
+    """{unit_id: {'start', 'end', 'words'}} from the source master (words = the unit's word-level
+    alignment when the master has it, else None). Units without timing are left out."""
+    out = {}
+    if not master_path or not Path(master_path).exists():
+        return out
+    units = {u['id']: u for u in read_json(master_path)['translation_units']}
+    for t in tasks:
+        u = units.get(t['unit_id'], {})
+        se = _unit_times(u)
+        if se is None:
+            continue
+        timing = u.get('timing') or {}
+        words = u.get('words') or timing.get('words') or u.get('word_timings')
+        out[t['unit_id']] = {'start': se[0], 'end': se[1], 'words': words}
+    return out
+
+
 def load_windows(tasks, master_path=None, **kw):
     """Windows from the source master's unit timings when available, else slot = source_duration_s."""
     if master_path and Path(master_path).exists():

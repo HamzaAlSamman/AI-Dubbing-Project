@@ -620,5 +620,77 @@ class PromptCacheIntegrityTests(unittest.TestCase):
             self.assertEqual(r.calls, 2)                                   # new prompt text -> new key
 
 
+
+# ---------------------------------------------------------------- promoted A: data contract with TTS
+class DataContractTests(unittest.TestCase):
+    def setUp(self):
+        import copy
+        import tempfile
+        from dubbing_translation.io import V2_CONFIG, load_config
+        from dubbing_translation.pipeline import run
+        from dubbing_translation.timing import Window
+        from test_translation_step import FakeQE, FakeSpeller, arabic_of
+        self.tmp = tempfile.TemporaryDirectory()
+        cfg = load_config(V2_CONFIG)
+        cfg['language'] = {}
+        rate = cfg['voice']['letters_per_second']
+        self.tasks = [{'unit_id': 'a', 'source_text': 'So if you take X1 and', 'context_before': [], 'context_after': []},
+                      {'unit_id': 'b', 'source_text': 'you know, put that first.', 'context_before': [], 'context_after': []},
+                      {'unit_id': 'c', 'source_text': 'Steps 1, 2, 3, 4 follow.', 'context_before': [], 'context_after': []}]
+        self.original = copy.deepcopy(self.tasks)
+        windows = {u: Window(u, 2.0, 2.2) for u in 'abc'}
+        self.timing = {'a': {'start': 10.0, 'end': 12.0, 'words': [{'w': 'So', 's': 10.0, 'e': 10.2}]},
+                       'b': {'start': 12.1, 'end': 14.1, 'words': None},
+                       'c': {'start': 15.0, 'end': 17.0, 'words': None}}
+
+        class Gen:
+            uses_budget, name, prompt_sha = False, 'mt', 'abc123'
+
+            def describe(self):
+                return {'name': 'mt', 'model': 'fake-mt', 'prompt_version': 'p1', 'prompt_sha': 'abc123'}
+
+            def generate(self, task, budget):
+                n = int(task['window_s'] * rate)
+                return [{'text': arabic_of(n), 'variant': 'v'}]
+
+        self.run_dir, self.final, _ = run(self.tasks, windows, cfg, self.tmp.name, generators=[Gen()], qe=FakeQE(),
+                                          speller=FakeSpeller(), log=lambda *_: None, source_timing=self.timing)
+        self.doc = json.loads((Path(self.run_dir) / 'translation_final.json').read_text(encoding='utf-8'))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_output_validates_against_the_schema(self):
+        import jsonschema
+        schema = json.loads((TR / 'schemas' / 'translation_final.schema.json').read_text(encoding='utf-8'))
+        jsonschema.validate(self.doc, schema)
+        self.assertEqual(self.doc['schema_version'], 'translation_final/2')
+
+    def test_no_original_unit_or_timestamp_is_lost(self):
+        parts = [p for u in self.doc['units'] for p in u['source_units']]
+        self.assertEqual([p['unit_id'] for p in parts], ['a', 'b', 'c'])
+        for p in parts:
+            self.assertEqual((p['start'], p['end']), (self.timing[p['unit_id']]['start'], self.timing[p['unit_id']]['end']))
+            self.assertEqual(p['source_text'], next(t['source_text'] for t in self.original if t['unit_id'] == p['unit_id']))
+        self.assertEqual(parts[0]['words'], self.timing['a']['words'])
+
+    def test_merged_unit_is_derived_and_maps_to_its_parts(self):
+        merged = self.doc['units'][0]
+        self.assertEqual((merged['unit_id'], merged['derived'], merged['merged_from']), ('a+b', True, ['a', 'b']))
+        self.assertEqual((merged['start'], merged['end']), (10.0, 14.1))
+        self.assertEqual(merged['source_text'].split(), 'So if you take X1 and you know, put that first.'.split())
+        self.assertFalse(self.doc['units'][1]['derived'])
+
+    def test_provenance_and_flags_are_kept(self):
+        u = self.doc['units'][0]
+        self.assertEqual(u['provenance']['prompt_sha'], 'abc123')
+        self.assertEqual(u['provenance']['generator_info']['model'], 'fake-mt')
+        self.assertEqual(u['spoken_version'], 'v2')
+        self.assertEqual(self.doc['units'][1]['source_flags']['spelled_digits'], ['1, 2, 3, 4'])
+
+    def test_input_tasks_are_not_modified(self):
+        self.assertEqual(self.tasks, self.original)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -31,6 +31,7 @@ from .generators import PermanentLLMError, QuotaExhausted, TransientLLMError
 # an LLM role (glossary, refine, rank, polish) that fails is stopped for the run; the run is degraded
 LLM_STOP = (QuotaExhausted, TransientLLMError, PermanentLLMError)
 from .language import CourseMemory, Glossary, Language, build_glossary, term_contexts
+from .contract import SCHEMA_VERSION, source_reference, validate_final
 from .segment import prepare_sources
 from .prompts import (LEGACY_KEY_VERSIONS, POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM,
                       RANK_V2_VERSION, RANK_VERSION, REFINE_SYSTEM, REFINE_V3_SYSTEM, REFINE_V3_VERSION,
@@ -152,7 +153,8 @@ def load_candidates(tasks, windows, generators, cfg, work_dir, language=None, re
                     seen[text]['also_from'].append(gen.name)
                     continue
                 c = {'cand_id': f'{gen.name}:{item["variant"]}', 'generator': gen.name, 'variant': item['variant'],
-                     'text': text, 'raw_text': item['text'], 'also_from': []}
+                     'text': text, 'raw_text': item['text'], 'also_from': [],
+                     'prompt_sha': rec.get('prompt_sha'), 'generator_info': rec.get('generator_info')}
                 seen[text] = c
                 cands.append(c)
         out[t['unit_id']] = cands
@@ -239,8 +241,11 @@ def refine_unit(task, window, cands, cfg, client, qe, misspelled_fn, allow, work
     if not accepted:
         return None, rec['attempts']
     a = accepted[0]
-    return {'cand_id': f'{name}:refine', 'generator': name, 'variant': 'refine', 'text': a['text'],
-            'raw_text': a['text'], 'also_from': [], 'eval': a['eval'], 'refined_from': best['cand_id']}, rec['attempts']
+    refined = {'cand_id': f'{name}:refine', 'generator': name, 'variant': 'refine', 'text': a['text'],
+               'raw_text': a['text'], 'also_from': [], 'eval': a['eval'], 'refined_from': best['cand_id'],
+               'prompt_sha': prompt_sha(system),
+               'generator_info': {'name': name, 'kind': 'llm', 'model': client.model, 'prompt_version': version}}
+    return refined, rec['attempts']
 
 
 # ------------------------------------------------------------------ 3b. LLM re-ranking of accepted candidates
@@ -332,23 +337,31 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
         return None, rec
     return {'cand_id': f'{name}:polish', 'generator': name, 'variant': 'polish', 'text': a['text'],
             'raw_text': a['text'], 'also_from': [], 'eval': a['eval'], 'polished_from': chosen['cand_id'],
+            'prompt_sha': prompt_sha(POLISH_SYSTEM),
+            'generator_info': {'name': name, 'kind': 'llm', 'model': client.model, 'prompt_version': POLISH_VERSION},
             'rank_scores': chosen.get('rank_scores')}, rec
 
 
 # ------------------------------------------------------------------ 4. run
 def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client=None, rank_client=None,
         glossary_client=None, course_memory=None, course_memory_snapshot=None, video_id=None, repo_dir=None,
-        run_label='', environment=None, log=print):
+        run_label='', environment=None, source_timing=None, log=print):
     """glossary_client: LLM that builds the glossary of the video when [language] glossary = "auto..."
     (defaults to the refine client).
     course_memory: path of the course's terminology memory (JSON shared by all videos of a course). The run
     uses a snapshot of its verified terms (saved in the run folder, hash in the manifest) and records this
     video's proposals only after a complete, non-degraded run. video_id names this video there.
-    course_memory_snapshot: a saved snapshot file; replays exactly that prior and writes no memory."""
+    course_memory_snapshot: a saved snapshot file; replays exactly that prior and writes no memory.
+    source_timing: {unit_id: {'start', 'end', 'words'}} of the ORIGINAL units (io.load_source_timing); copied
+    unchanged into every output record (schemas/translation_final.schema.json)."""
     work_dir = Path(work_dir)
     source_tasks_hash = sha256_json([{k: t[k] for k in ('unit_id', 'source_text')} for t in tasks])
     source_units_count = len(tasks)
-    tasks, windows, source_prep = prepare_sources(tasks, windows, cfg)     # V2: ASR fragments / spelled digits
+    source_timing = source_timing or {}
+    source_refs = {t['unit_id']: source_reference(t, source_timing.get(t['unit_id'])) for t in tasks}
+    tasks, windows, source_prep = prepare_sources(
+        tasks, windows, cfg, timings={u: (v['start'], v['end']) for u, v in source_timing.items()
+                                      if v.get('start') is not None and v.get('end') is not None})
     auto_glossary, glossary_path, subject = None, None, None
     stopped, gen_report = {}, {}
     memory = CourseMemory(course_memory) if course_memory else None
@@ -428,6 +441,26 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
         return set(misspelled) | found
 
     final, refine_log, rank_changed = [], {}, 0
+    spoken_version = cfg['voice'].get('spoken_version', 'v1')
+    suspect_units = {}
+    for sus in source_prep.get('suspected_fragments', []):
+        for uid in sus['units']:
+            suspect_units.setdefault(uid, []).append(sus['reason'])
+
+    def contract_fields(t, w):
+        """Fields of the TTS contract: original units with timings, derived-unit mapping, source flags."""
+        parts = t.get('merged_from') or [t['unit_id']]
+        refs = [source_refs[p] for p in parts]
+        return {'derived': bool(t.get('merged_from')), 'merged_from': t.get('merged_from'), 'source_units': refs,
+                'source_flags': {'spelled_digits': [s for p in parts
+                                                    for s in source_prep.get('spelled_digit_flags', {}).get(p, [])],
+                                 'suspected_fragment': [r for p in parts for r in suspect_units.get(p, [])]},
+                'start': refs[0]['start'], 'end': refs[-1]['end'], 'spoken_version': spoken_version}
+
+    def provenance(c):
+        return {'cand_id': c.get('cand_id'), 'generator': c.get('generator'), 'prompt_sha': c.get('prompt_sha'),
+                'generator_info': c.get('generator_info'), 'refined_from': c.get('refined_from'),
+                'polished_from': c.get('polished_from')}
     mt_generators = {g.name for g in generators if not getattr(g, 'uses_budget', True)}
 
     def accurate_of(cs):
@@ -465,7 +498,9 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
             valid = [c for c in cs if not any(r.startswith('invalid') for r in c['eval']['reasons'])] or cs
             if not valid:
                 final.append({'unit_id': u, 'source_text': t['source_text'], 'status': 'missing', 'natural_ar': None,
-                              'tts_text': None, 'slot_s': w.slot_s, 'window_s': w.window_s, 'flags': ['no_candidate']})
+                              'accurate_ar': None, 'tts_text': None, 'slot_s': w.slot_s, 'window_s': w.window_s,
+                              'predicted_s': None, 'flags': ['no_candidate'], **contract_fields(t, w),
+                              'provenance': provenance({})})
                 continue
             chosen = min(valid, key=lambda c: (len(c['eval']['reasons']), rank_key(c['eval'])))
             status = 'needs_review'
@@ -499,11 +534,10 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
             flags.append(f'needs_speedup_x{ev["ratio_window"]:.2f}')
         final.append({'unit_id': u, 'source_text': t['source_text'], 'status': status,
                       'natural_ar': chosen['text'],
-                      'tts_text': tts_text(chosen['text'], version=cfg['voice'].get('spoken_version', 'v1')),
+                      'tts_text': tts_text(chosen['text'], version=spoken_version),
                       'selected_from': chosen['cand_id'], 'refined_from': chosen.get('refined_from'),
                       'polished_from': chosen.get('polished_from'), 'language': ev.get('language'),
-                      'accurate_ar': accurate_of(cs), 'merged_from': t.get('merged_from'),
-                      'source_text_asr': t.get('source_text_asr'),
+                      'accurate_ar': accurate_of(cs), **contract_fields(t, w), 'provenance': provenance(chosen),
                       'qe': ev['qe'], 'spelling_rate': ev['spelling_rate'], 'letters': ev['letters'],
                       'predicted_s': ev['predicted_s'], 'slot_s': w.slot_s, 'window_s': w.window_s,
                       'ratio_slot': ev['ratio_slot'], 'ratio_window': ev['ratio_window'], 'zone': ev['zone'],
@@ -595,10 +629,13 @@ def language_metrics(final):
 
 
 def _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log):
-    write_json_once(run_dir / 'translation_final.json',
-                    {'run_id': manifest['run_id'], 'config_sha256': manifest['config_sha256'],
-                     'tasks_sha256': manifest['tasks_sha256'], 'git_commit': manifest['git_commit'],
-                     'created_at': now_iso(), 'human_approved': False, 'units': final})
+    doc = {'schema_version': SCHEMA_VERSION, 'run_id': manifest['run_id'],
+           'config_sha256': manifest['config_sha256'], 'tasks_sha256': manifest['tasks_sha256'],
+           'source_tasks_sha256': manifest.get('source_tasks_sha256', manifest['tasks_sha256']),
+           'git_commit': manifest['git_commit'], 'created_at': now_iso(), 'human_approved': False,
+           'degraded': bool((manifest.get('status') or {}).get('degraded')), 'units': final}
+    validate_final(doc)                                        # an invalid hand-off is a bug: stop here
+    write_json_once(run_dir / 'translation_final.json', doc)
     write_json_once(run_dir / 'metrics.json', metrics)
     if refine_log:
         write_json_once(run_dir / 'refine_log.json', refine_log)
