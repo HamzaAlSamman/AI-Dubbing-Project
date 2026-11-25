@@ -28,6 +28,7 @@ from .common import git_commit, now_iso, now_stamp, read_json, sha256_json, writ
 from .gate import evaluate, only_duration_failed, rank_key
 from .generators import QuotaExhausted
 from .language import Language, build_glossary
+from .segment import prepare_sources
 from .prompts import (POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM, RANK_V2_VERSION, RANK_VERSION,
                       REFINE_SYSTEM, REFINE_V3_SYSTEM, REFINE_V3_VERSION, REFINE_VERSION, describe_issues)
 from .text import ar_tokens, clean_translation, tts_text
@@ -243,7 +244,7 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
     worse than the original line by more than `polish.max_qe_worse` (meaning guard)."""
     pcfg = cfg.get('polish', {})
     found = chosen['eval']['language']
-    if not found['calques']:
+    if not language.needs_polish(found):
         return None, None
     budget = _budget(window, cfg)
     payload = {'english_source': task['source_text'], 'arabic': chosen['text'],
@@ -267,7 +268,7 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
                 verdict = 'rejected_by_gate'
             elif q > base_q + pcfg.get('max_qe_worse', 0.5):
                 verdict = 'meaning_guard'
-            elif len(ev['language']['calques']) >= len(found['calques']):
+            elif ev['style_flags'] >= chosen['eval']['style_flags']:
                 verdict = 'no_improvement'
             else:
                 verdict = 'accepted'
@@ -289,6 +290,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
     """glossary_client: LLM that builds the glossary of the video when [language] glossary = "auto..."
     (defaults to the refine client)."""
     work_dir = Path(work_dir)
+    tasks, windows, source_prep = prepare_sources(tasks, windows, cfg)     # V2: ASR fragments / spelled digits
     auto_glossary, glossary_path = None, None
     lc = cfg.get('language') or {}
     if str(lc.get('glossary', '')).startswith('auto'):
@@ -312,6 +314,7 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                 'refiner': None if refine_client is None else f'{refine_client.provider}:{refine_client.model}',
                 'ranker': None if rank_client is None else f'{rank_client.provider}:{rank_client.model}',
                 'windows': {u: w.as_dict() for u, w in windows.items()}, 'human_review': 'none',
+                'source_preparation': source_prep,
                 'language': None if language is None else {
                     'name': language.name, 'modes': language.modes,
                     'glossary_terms': len(language.glossary.terms) if language.glossary else 0,
@@ -333,6 +336,14 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
         return set(misspelled) | found
 
     final, refine_log, rank_changed = [], {}, 0
+    mt_generators = {g.name for g in generators if not getattr(g, 'uses_budget', True)}
+
+    def accurate_of(cs):
+        """Best MetricX line among the plain MT candidates (no length target): the accurate reference
+        version kept next to the dubbing line (FigJam: translation.accurate / dub / final)."""
+        mt = [c for c in cs if c['generator'] in mt_generators and c['eval']['qe'] is not None
+              and not any(r.startswith('invalid') for r in c['eval']['reasons'])]
+        return min(mt, key=lambda c: c['eval']['qe'])['text'] if mt else None
     use_rank = rank_client is not None and cfg.get('rank', {}).get('enabled')
     for t in tasks:
         u, w = t['unit_id'], windows[t['unit_id']]
@@ -398,6 +409,8 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                       'natural_ar': chosen['text'], 'tts_text': tts_text(chosen['text']),
                       'selected_from': chosen['cand_id'], 'refined_from': chosen.get('refined_from'),
                       'polished_from': chosen.get('polished_from'), 'language': ev.get('language'),
+                      'accurate_ar': accurate_of(cs), 'merged_from': t.get('merged_from'),
+                      'source_text_asr': t.get('source_text_asr'),
                       'qe': ev['qe'], 'spelling_rate': ev['spelling_rate'], 'letters': ev['letters'],
                       'predicted_s': ev['predicted_s'], 'slot_s': w.slot_s, 'window_s': w.window_s,
                       'ratio_slot': ev['ratio_slot'], 'ratio_window': ev['ratio_window'], 'zone': ev['zone'],
@@ -435,6 +448,7 @@ def summarize(final, cands, stopped, refine_client, allow):
         'spelling_allowlist_size': len(allow), 'stopped_early': stopped,
         'flags': dict(collections.Counter(fl.split('_x')[0] for f in final for fl in f.get('flags', []))),
         **language_metrics(final),
+        'merged_units': sum(bool(f.get('merged_from')) for f in final),
     }
 
 
@@ -447,6 +461,7 @@ def language_metrics(final):
             'units_dialect': sum(bool(x['dialect']) for x in langs),
             'units_stiff_patterns': sum(bool(x['calques']) for x in langs),
             'stiff_patterns_total': sum(len(x['calques']) for x in langs),
+            'units_hard_to_follow': sum(bool(x.get('simplicity')) for x in langs),
             'polished_units': sum(bool(f.get('polished_from')) for f in final)}
 
 
@@ -467,7 +482,8 @@ def _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log):
                          'spelling_rate': e['spelling_rate'], 'letters': e['letters'],
                          'predicted_s': e['predicted_s'], 'ratio_slot': e['ratio_slot'],
                          'ratio_window': e['ratio_window'], 'zone': e['zone'],
-                         'style_flags': '|'.join((e.get('language') or {}).get('calques', [])), 'text': c['text']})
+                         'style_flags': '|'.join((e.get('language') or {}).get('calques', []) +
+                                                 (e.get('language') or {}).get('simplicity', [])), 'text': c['text']})
     path = run_dir / 'candidates_scored.csv'
     with path.open('x', encoding='utf-8-sig', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0]) if rows else ['unit_id'])

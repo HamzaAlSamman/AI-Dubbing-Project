@@ -109,7 +109,8 @@ RANK_V2_VERSION = 'rank_v2'
 RANK_V2_SYSTEM = RANK_SYSTEM.replace(
     "- fluency: natural, grammatical Modern Standard Arabic (agreement, word choice) suitable to be spoken.\n",
     "- fluency: natural, grammatical, simple Modern Standard Arabic (agreement, word choice) suitable to be "
-    "spoken; lower it for dialect words, stiff translation patterns (يقوم بـ + مصدر، يتضح أنه، ما سنفعله هو، "
+    "spoken and easy for a general Arabic listener (short sentences, common words); lower it for dialect words, "
+    "stiff translation patterns (يقوم بـ + مصدر، يتضح أنه، ما سنفعله هو، "
     "عبارة عن) and technical terms that differ from the glossary when one is given.\n")
 
 POLISH_VERSION = 'polish_v1'
@@ -120,7 +121,8 @@ POLISH_SYSTEM = (
     "Rewrite the Arabic so that the listed problems disappear, as a minimal edit:\n"
     "- keep every fact, number, variable, negation and the meaning exactly; add nothing, drop nothing;\n"
     "- keep the length within the given letter range (spaces, punctuation and diacritics not counted);\n"
-    "- simple, natural spoken Modern Standard Arabic; glossary renderings for technical terms;\n"
+    "- simple, natural spoken Modern Standard Arabic that a general Arabic listener understands at once: short "
+    "sentences, common words, one consistent form of address; glossary renderings for technical terms;\n"
     "- variables and code as plain Latin text, numbers as digits; never the straight double-quote character.\n"
     'Return only JSON: {"natural_ar": "..."}'
 )

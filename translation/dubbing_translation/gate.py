@@ -63,12 +63,14 @@ def evaluate(text, source, window, *, qe, misspelled_words, cfg, allowlist=froze
     reasons += mechanical_issues(source, text)
     if dur['zone'] in ('too_long', 'too_short'):
         reasons.append('duration_' + dur['zone'])
-    found = language.check(source, text) if language is not None else {'terms': [], 'dialect': [], 'calques': []}
+    found = (language.check(source, text) if language is not None
+             else {'terms': [], 'dialect': [], 'calques': [], 'simplicity': []})
     if language is not None:
         reasons += language.reasons(found)
     return {'qe': None if qe is None else round(qe, 3), 'spelling_rate': round(spelling_rate, 3),
             'misspelled': bad, 'letters': n_letters(text), 'spoken_letters': spoken, **dur, 'reasons': reasons,
-            'language': found, 'style_flags': len(found['calques']), 'accepted': not reasons}
+            'language': found, 'style_flags': len(found['calques']) + len(found['simplicity']),
+            'accepted': not reasons}
 
 
 def only_duration_failed(result):

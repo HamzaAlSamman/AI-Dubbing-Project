@@ -67,6 +67,15 @@ glossary = "auto"
 terminology = "reject"       # reject | flag | off : approved term missing in a candidate
 dialect = "reject"
 calques = "flag"             # stiff patterns: flagged, then removed by the guarded polish step
+simplicity = "flag"          # long sentences, rare words, mixed address: flagged, then polished
+
+[segmentation]
+# Fix ASR artefacts before translation. merge_fragments: a unit that does not end a sentence, or whose
+# next unit starts in lower case, is merged with it (ids "a+b", windows summed). fix_spelled_digits:
+# "1, 2, 2, 8, 8" (ASR digit by digit) -> 12288.
+merge_fragments = true
+max_merged_words = 120
+fix_spelled_digits = true
 
 [polish]
 # Dubbing adaptation of an accepted line that still has stiff patterns: one LLM edit, kept only if it

@@ -25,6 +25,8 @@ from dubbing_translation.common import now_iso, read_json, sha256_json, write_js
 from dubbing_translation.generators import LLMClient, QuotaExhausted                      # noqa: E402
 from dubbing_translation.language import Language, Policy, build_glossary                 # noqa: E402
 from dubbing_translation.prompts import POLISH_SYSTEM, POLISH_VERSION                     # noqa: E402
+from dubbing_translation.segment import fix_spelled_digits, merge_fragments               # noqa: E402
+from dubbing_translation.timing import Window                                             # noqa: E402
 from dubbing_translation.text import clean_translation                                    # noqa: E402
 
 
@@ -92,7 +94,7 @@ def main(argv=None):
         if not sel:
             continue
         f = sel['findings']
-        if not (f['calques'] or f['terms'] or f['dialect']):
+        if not (f['calques'] or f['terms'] or f['dialect'] or f['simplicity']):
             continue
         payload = {'english_source': src[uid], 'arabic': sel['text'],
                    'problems': lang.issue_hints(src[uid], f), **lang.prompt_block(src[uid])}
@@ -116,7 +118,10 @@ def main(argv=None):
         vals = [v for v in d.values() if v]
         return {'units': len(vals), 'term_missing': sum(bool(v['terms']) for v in vals),
                 'dialect': sum(bool(v['dialect']) for v in vals), 'stiff': sum(bool(v['calques']) for v in vals),
-                'stiff_total': sum(len(v['calques']) for v in vals)}
+                'stiff_total': sum(len(v['calques']) for v in vals),
+                'hard_to_follow': sum(bool(v.get('simplicity')) for v in vals),
+                'long_sentences': sum(sum(x.startswith('long_sentence') for x in v.get('simplicity', [])) for v in vals),
+                'address_mixed': sum(any(x.startswith('address') for x in v.get('simplicity', [])) for v in vals)}
 
     after_select = {u: (s['findings'] if s else None) for u, s in selected.items()}
     after_polish = {u: (polished[u]['findings'] if u in polished else after_select[u]) for u in after_select}
@@ -127,6 +132,11 @@ def main(argv=None):
                                               selected[u['unit_id']]['text'] != u['natural_ar']),
                'v2_needs_review': [u for u, s in selected.items() if s and s['status'] == 'needs_review'],
                'polished_units': len(polished)}
+    dummy = {t['unit_id']: Window(t['unit_id'], 1.0, 1.0) for t in tasks}
+    summary['source_preparation'] = {
+        'merge_fragments': [m['merged_from'] for m in merge_fragments(tasks, dummy)[2]],
+        'spelled_digits': {t['unit_id']: fix_spelled_digits(t['source_text'])[1] for t in tasks
+                           if fix_spelled_digits(t['source_text'])[1]}}
     result = {'created_at': now_iso(), 'run_id': final.get('run_id'), 'glossary_file': str(gpath),
               'glossary': glossary.as_dict(), 'policy': lang.policy.version, 'summary': summary,
               'limits': ['polish preview is not meaning-checked (MetricX needs a GPU); run V2 on Colab',

@@ -14,6 +14,8 @@ rules = [
   "Correct agreement: «الدورة» is feminine (هذه الدورة), «مجموعة» takes a feminine verb (تتكوّن مجموعة).",
   "Use the glossary renderings for every technical term, the same way in every sentence.",
   "Variables, symbols and code stay as plain Latin text (x, nx, Y, x.shape); numbers as digits.",
+  "Easy for a general Arabic listener: short sentences (one idea each), common words over rare or classical ones (هناك not ثمة، لكن not بيد أن), active verbs over «يتم + مصدر».",
+  "Address the viewer in the singular (أنت: لديك، سترى، يمكنك), the same way in every sentence.",
 ]
 
 # Words that only occur in dialects (Levantine, Egyptian, Gulf). One hit rejects a candidate.
@@ -23,6 +25,34 @@ dialect_words = [
   "إيه", "ازاي", "إزاي", "دلوقتي", "كده", "كدا", "بتاع", "بتاعة", "عايز", "عاوز", "عايزة", "فين", "ليه", "مش",
   "برضه", "أوي", "اوي", "وش", "شلون", "عشان", "علشان", "اللي", "إللي", "وايد",
 ]
+
+# Readability for a general Arabic listener (flags; the polish step rewrites the line).
+[simplicity]
+max_sentence_words = 25      # a spoken sentence longer than this is hard to follow; split it
+
+# formal / classical words -> the common word a general listener knows
+[simplicity.rare_words]
+"ثمة" = "هناك"
+"بيد أن" = "لكن"
+"آنفا" = "سابقًا"
+"فحوى" = "مضمون"
+"كنه" = "حقيقة"
+"أضحى" = "أصبح"
+"طفق" = "بدأ"
+"برمته" = "كله"
+"مغبة" = "عاقبة"
+"البتة" = "أبدًا"
+"ألفى" = "وجد"
+"تمخض" = "نتج"
+"حدا" = "دفع"
+"لدن" = "من"
+
+# One form of address for the viewer ("you"). singular = أنت; the plural forms below are flagged.
+[address]
+form = "singular"
+# (greetings such as «أهلًا بكم» address the whole audience and are not listed)
+other_forms = ["أنتم", "لديكم", "عليكم", "إليكم", "منكم", "كنتم", "ستجدون", "تجدون",
+               "تستطيعون", "يمكنكم", "تعلمون", "ترون", "سترون", "تحتاجون", "تريدون", "ستتعلمون", "تتعلمون"]
 
 # Translationese that is grammatical but stiff when spoken. Reported as style flags (not a rejection
 # by default); the polish step and the ranker try to remove them.
@@ -50,6 +80,11 @@ hint = "«عبارة عن» is filler; write «هو/هي» or nothing"
 id = "maa_badiha"
 pattern = "مع\\s+بعضها"
 hint = "«مع بعضها» is colloquial; use «معًا» or «بعضها ببعض»"
+
+[[calque]]
+id = "yatimm"
+pattern = "(?:^|\\s)(?:سيتم|يتم|تم)\\s+[^\\s،.]{3,}"
+hint = "«يتم + مصدر» is heavy; use an active verb (نمثّل، يُمثَّل) instead of «يتم تمثيل»"
 
 [[calque]]
 id = "yatahassal"

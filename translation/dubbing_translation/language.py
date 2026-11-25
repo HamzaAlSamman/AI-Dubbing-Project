@@ -170,6 +170,12 @@ class Policy:
         self.dialect = {normalize_ar(w) for w in data.get('dialect_words', [])}
         self.calques = [{'id': c['id'], 're': re.compile(c['pattern']), 'hint': c.get('hint', '')}
                         for c in data.get('calque', [])]
+        simp = data.get('simplicity', {})
+        self.max_sentence_words = int(simp.get('max_sentence_words', 0) or 0)
+        self.rare_words = {normalize_ar(k): v for k, v in (simp.get('rare_words') or {}).items()}
+        addr = data.get('address', {})
+        self.address = addr.get('form')
+        self.address_other = {normalize_ar(w) for w in addr.get('other_forms', [])}
         # subject-independent notation terms, merged into every glossary
         self.terms = Glossary({'version': self.version + '_terms', 'term': data.get('term', [])})
 
@@ -191,6 +197,39 @@ class Policy:
         t = _MARKS.sub('', arabic or '')
         return [c['id'] for c in self.calques if c['re'].search(t)]
 
+    def simplicity_ids(self, arabic):
+        """Readability findings: 'long_sentence:<words>', 'rare:<word>', 'address:<form>'."""
+        out = []
+        t = _MARKS.sub('', arabic or '')
+        if self.max_sentence_words:
+            for sent in re.split(r'[.!?؟؛]+', t):
+                n = len(sent.split())
+                if n > self.max_sentence_words:
+                    out.append(f'long_sentence:{n}')
+        norm = ' ' + ' '.join(normalize_ar(w) for w in re.findall(r'\S+', t)) + ' '
+        for word in self.rare_words:
+            if re.search(r'(?:^|\s)[وفبل]?' + re.escape(word) + r'(?=[\s،.؟!]|$)', norm):
+                out.append('rare:' + word)
+        if self.address_other:
+            for tok in _AR_TOKEN.findall(t):
+                n = normalize_ar(tok)
+                if n in self.address_other or (n[:1] in _CLITIC and n[1:] in self.address_other):
+                    out.append('address:' + tok)
+                    break
+        return out
+
+    def simplicity_hints(self, ids):
+        hints = []
+        for i in ids:
+            kind, _, val = i.partition(':')
+            if kind == 'long_sentence':
+                hints.append(f'a sentence has {val} words: split it into short sentences of one idea each')
+            elif kind == 'rare':
+                hints.append(f'replace the rare word «{val}» with the common word «{self.rare_words.get(val, "")}»')
+            elif kind == 'address':
+                hints.append(f'address the viewer in the {self.address} (أنت), not «{val}»')
+        return hints
+
     def calque_hints(self, ids):
         by_id = {c['id']: c['hint'] for c in self.calques}
         return [by_id[i] for i in ids if i in by_id]
@@ -199,11 +238,12 @@ class Policy:
 class Language:
     """Policy + glossary + how the gate treats each kind of finding ('reject' | 'flag' | 'off')."""
 
-    def __init__(self, policy=None, glossary=None, *, terminology='reject', dialect='reject', calques='flag'):
+    def __init__(self, policy=None, glossary=None, *, terminology='reject', dialect='reject', calques='flag',
+                 simplicity='flag'):
         if policy is not None and policy.terms.terms:
             glossary = glossary.merged(policy.terms) if glossary is not None else policy.terms
         self.policy, self.glossary = policy, glossary
-        self.modes = {'terminology': terminology, 'dialect': dialect, 'calques': calques}
+        self.modes = {'terminology': terminology, 'dialect': dialect, 'calques': calques, 'simplicity': simplicity}
         self.name = '+'.join(x.version for x in (policy, glossary) if x is not None) or 'none'
 
     @classmethod
@@ -228,13 +268,15 @@ class Language:
         elif spec:
             glossary = Glossary.load(spec)
         return cls(policy, glossary, terminology=lc.get('terminology', 'reject'),
-                   dialect=lc.get('dialect', 'reject'), calques=lc.get('calques', 'flag'))
+                   dialect=lc.get('dialect', 'reject'), calques=lc.get('calques', 'flag'),
+                   simplicity=lc.get('simplicity', 'flag'))
 
     def check(self, source, arabic):
         terms = [t['id'] for t in self.glossary.missing(source, arabic)] if self.glossary else []
         dialect = self.policy.dialect_words(arabic) if self.policy else []
         calques = self.policy.calque_ids(arabic) if self.policy else []
-        return {'terms': terms, 'dialect': dialect, 'calques': calques}
+        simple = self.policy.simplicity_ids(arabic) if self.policy else []
+        return {'terms': terms, 'dialect': dialect, 'calques': calques, 'simplicity': simple}
 
     def reasons(self, found):
         """Gate reasons for the findings whose mode is 'reject'."""
@@ -245,6 +287,8 @@ class Language:
             out.append('dialect:' + ','.join(sorted(set(found['dialect']))))
         if self.modes['calques'] == 'reject':
             out += ['style:' + c for c in found['calques']]
+        if self.modes['simplicity'] == 'reject':
+            out += ['simple:' + c for c in found.get('simplicity', [])]
         return out
 
     def prompt_block(self, source):
@@ -268,7 +312,13 @@ class Language:
             hints.append('replace dialect words with Modern Standard Arabic: ' + '، '.join(sorted(set(found['dialect']))))
         if self.policy and found['calques']:
             hints += self.policy.calque_hints(found['calques'])
+        if self.policy and found.get('simplicity'):
+            hints += self.policy.simplicity_hints(found['simplicity'])
         return hints
+
+    @staticmethod
+    def needs_polish(found):
+        return bool(found.get('calques') or found.get('simplicity'))
 
 
 def build_glossary(tasks, client, cache_dir, *, max_terms=40, log=print):

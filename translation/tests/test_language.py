@@ -159,6 +159,7 @@ class V2PipelineTests(unittest.TestCase):
         self.assertEqual(f['polished_from'], 'llm:v')
         self.assertEqual(metrics['polished_units'], 1)
         self.assertEqual(metrics['units_term_missing'], 0)
+        self.assertEqual(f['accurate_ar'], wrong)                    # plain MT line kept as the accurate version
         manifest = json.loads((run_dir / 'manifest.json').read_text(encoding='utf-8'))
         self.assertEqual(manifest['language']['glossary_terms'], 4)     # 3 of the video + 1 generic (lowercase)
         self.assertTrue((run_dir / 'glossary.json').exists())
@@ -178,6 +179,34 @@ class V2PipelineTests(unittest.TestCase):
         self.assertEqual(set(table), {'V1 final_v1', 'V2'})
         self.assertEqual(table['V2']['accepted_pct'], 100.0)
         self.assertEqual(table['V2']['term_missing_units'], 0)
+
+
+
+class SegmentTests(unittest.TestCase):
+    def test_merge_fragments_keeps_ids_and_sums_windows(self):
+        from dubbing_translation.segment import merge_fragments
+        tasks = [{'unit_id': 'a', 'source_text': 'So if you take X1 and'},
+                 {'unit_id': 'b', 'source_text': 'you know, put that as the first column.'},
+                 {'unit_id': 'c', 'source_text': 'Next idea.'}]
+        windows = {'a': Window('a', 1.0, 1.2), 'b': Window('b', 3.0, 3.5), 'c': Window('c', 1.0, 1.0)}
+        t, w, merges = merge_fragments(tasks, windows)
+        self.assertEqual([x['unit_id'] for x in t], ['a+b', 'c'])
+        self.assertEqual(t[0]['merged_from'], ['a', 'b'])
+        self.assertEqual((w['a+b'].slot_s, w['a+b'].window_s), (4.0, 4.7))
+        self.assertEqual(len(merges), 1)
+
+    def test_spelled_digits(self):
+        from dubbing_translation.segment import fix_spelled_digits
+        self.assertEqual(fix_spelled_digits('to be 1, 2, 2, 8, 8. That')[0], 'to be 12288. That')
+        self.assertEqual(fix_spelled_digits('values 255, 231, and 1, 2, 3')[1], [])
+
+    def test_simplicity_findings(self):
+        long_line = ' '.join(['كلمة'] * 30) + '.'
+        self.assertEqual(POLICY.simplicity_ids(long_line), ['long_sentence:30'])
+        self.assertIn('rare:ثمه', POLICY.simplicity_ids('ثمة فكرة أخرى.'))
+        self.assertTrue(any(x.startswith('address') for x in POLICY.simplicity_ids('وحتى إن كنتم تعلمونه')))
+        self.assertEqual(POLICY.simplicity_ids('أهلًا بكم، سترى الفكرة الآن.'), [])
+        self.assertEqual(POLICY.calque_ids('يتم تمثيل المثال بزوج'), ['yatimm'])
 
 
 if __name__ == '__main__':
