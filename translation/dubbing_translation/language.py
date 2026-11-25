@@ -243,6 +243,7 @@ class Language:
         if policy is not None and policy.terms.terms:
             glossary = glossary.merged(policy.terms) if glossary is not None else policy.terms
         self.policy, self.glossary = policy, glossary
+        self.subject = None          # subject of the video, found by the terminology agent
         self.modes = {'terminology': terminology, 'dialect': dialect, 'calques': calques, 'simplicity': simplicity}
         self.name = '+'.join(x.version for x in (policy, glossary) if x is not None) or 'none'
 
@@ -291,9 +292,15 @@ class Language:
             out += ['simple:' + c for c in found.get('simplicity', [])]
         return out
 
-    def prompt_block(self, source):
-        """Policy rules and the glossary lines relevant to this source, for LLM prompts."""
+    def prompt_block(self, source, task=None):
+        """Policy rules, the video subject, the speaker's gender (when known) and the glossary lines
+        relevant to this source, for LLM prompts."""
         block = {}
+        if self.subject:
+            block['video_subject'] = self.subject
+        gender = (task or {}).get('speaker_gender')
+        if gender in ('male', 'female'):
+            block['speaker_gender'] = gender            # first-person agreement (أنا متأكد / متأكدة)
         if self.policy:
             block['style_rules'] = self.policy.rules
         if self.glossary:
@@ -321,23 +328,82 @@ class Language:
         return bool(found.get('calques') or found.get('simplicity'))
 
 
-def build_glossary(tasks, client, cache_dir, *, max_terms=40, log=print):
+class CourseMemory:
+    """Terminology memory of a whole course: the glossary decisions of earlier videos.
+
+    Every new video's terminology agent receives these approved terms and must reuse them, so a term
+    keeps one Arabic rendering across all videos of the course (FigJam: «ما نعتمده في بداية الفيلم يجب
+    أن يصل إلى بقية المشاهد»). After each video the new terms are appended; existing terms never change
+    automatically (a person edits the file to change a decision). Every update keeps a snapshot."""
+
+    def __init__(self, path):
+        self.path = Path(path)
+        self.data = {'terms': [], 'videos': []}
+        if self.path.exists():
+            import json
+            self.data = json.loads(self.path.read_text(encoding='utf-8'))
+
+    @property
+    def terms(self):
+        return list(self.data.get('terms', []))
+
+    def glossary(self):
+        return Glossary.from_terms(self.terms, 'course_memory') if self.terms else None
+
+    def update(self, new_terms, video_id, subject=None):
+        """Append terms whose English is not in the memory yet; returns the number added."""
+        import json
+        from .common import now_iso
+        known = {e.lower() for t in self.terms for e in t.get('en', []) if isinstance(e, str)}
+        added = []
+        for t in new_terms:
+            en = [e for e in t.get('en') or [] if isinstance(e, str)]
+            if en and not any(e.lower() in known for e in en):
+                added.append({k: t[k] for k in ('en', 'ar', 'ar_forms', 'avoid') if k in t} | {'first_video': video_id})
+                known.update(e.lower() for e in en)
+        self.data.setdefault('terms', []).extend(added)
+        self.data.setdefault('videos', []).append({'video': video_id, 'subject': subject, 'added': len(added),
+                                                   'at': now_iso()})
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        snap = self.path.parent / 'history' / f'{self.path.stem}__{len(self.data["videos"]):03d}.json'
+        snap.parent.mkdir(parents=True, exist_ok=True)
+        text = json.dumps(self.data, ensure_ascii=False, indent=1)
+        snap.write_text(text, encoding='utf-8')
+        tmp = self.path.with_suffix('.tmp')
+        tmp.write_text(text, encoding='utf-8')
+        tmp.replace(self.path)
+        return len(added)
+
+
+def build_glossary(tasks, client, cache_dir, *, max_terms=40, prior_terms=(), log=print):
     """Terminology agent: the LLM reads the whole transcript once, before translation, and proposes
-    the glossary of this video. Write-once cache keyed by transcript + prompt + model, so a rerun reuses
-    the same decisions and the file can be reviewed or edited by a person."""
+    the glossary of this video. `prior_terms` are the course's approved terms from earlier videos: the
+    agent must reuse them and only add new ones, and they win over its proposals.
+    Write-once cache keyed by transcript + prior terms + prompt + model, so a rerun reuses the same
+    decisions and the file can be reviewed or edited by a person.
+    Returns (glossary, cache path, subject)."""
     import json
     from .common import now_iso, read_json, sha256_json, write_json_once
     from .prompts import GLOSSARY_SYSTEM, GLOSSARY_VERSION
     transcript = [{'unit': t['unit_id'], 'text': t['source_text']} for t in tasks]
-    key = sha256_json([transcript, GLOSSARY_SYSTEM, client.provider, client.model])[:12]
+    prior = [{k: t[k] for k in ('en', 'ar') if k in t} for t in prior_terms]
+    key = sha256_json([transcript, prior, GLOSSARY_SYSTEM, client.provider, client.model])[:12]
     path = Path(cache_dir) / 'glossary' / f'{GLOSSARY_VERSION}__{key}.json'
     if path.exists():
         rec = read_json(path)
     else:
-        reply = client.chat_json(GLOSSARY_SYSTEM, json.dumps({'transcript': transcript}, ensure_ascii=False)) or {}
+        payload = {'transcript': transcript}
+        if prior:
+            payload['approved_terms_from_earlier_videos'] = prior
+        reply = client.chat_json(GLOSSARY_SYSTEM, json.dumps(payload, ensure_ascii=False)) or {}
         terms = [t for t in reply.get('terms') or [] if isinstance(t, dict)][:max_terms]
         rec = {'version': f'{GLOSSARY_VERSION}__{key}', 'builder': f'{client.provider}:{client.model}',
-               'subject': reply.get('subject'), 'created_at': now_iso(), 'terms': terms, 'human_review': 'none'}
+               'subject': reply.get('subject'), 'created_at': now_iso(), 'prior_terms': len(prior),
+               'terms': terms, 'human_review': 'none'}
         write_json_once(path, rec)
-        log(f'[glossary] {len(terms)} terms for "{rec["subject"]}" by {rec["builder"]} -> {path}')
-    return Glossary.from_terms(rec['terms'], rec['version']), path
+        log(f'[glossary] {len(terms)} terms for "{rec["subject"]}" by {rec["builder"]} '
+            f'({len(prior)} course terms given) -> {path}')
+    glossary = Glossary.from_terms(rec['terms'], rec['version'])
+    if prior_terms:
+        glossary = Glossary.from_terms(list(prior_terms), 'course_memory').merged(glossary)
+    return glossary, path, rec.get('subject')

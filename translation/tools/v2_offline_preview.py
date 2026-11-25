@@ -55,7 +55,7 @@ def main(argv=None):
     rows = list(csv.DictReader(open(args.candidates, encoding='utf-8-sig')))
 
     glossary_client = LLMClient('gemini', args.glossary_model, min_interval_s=4.5)
-    glossary, gpath = build_glossary(tasks, glossary_client, out / 'cache')
+    glossary, gpath, _subject = build_glossary(tasks, glossary_client, out / 'cache')
     lang = Language(Policy.load(args.policy), glossary)
     print(f'glossary: {len(glossary.terms)} terms ({gpath.name})')
 

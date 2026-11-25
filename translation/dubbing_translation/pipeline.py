@@ -27,7 +27,7 @@ from . import __version__
 from .common import git_commit, now_iso, now_stamp, read_json, sha256_json, write_json_once
 from .gate import evaluate, only_duration_failed, rank_key
 from .generators import QuotaExhausted
-from .language import Language, build_glossary
+from .language import CourseMemory, Language, build_glossary
 from .segment import prepare_sources
 from .prompts import (POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM, RANK_V2_VERSION, RANK_VERSION,
                       REFINE_SYSTEM, REFINE_V3_SYSTEM, REFINE_V3_VERSION, REFINE_VERSION, describe_issues)
@@ -47,7 +47,7 @@ def _language_inputs(task, language):
     if language is None:
         return {}
     pairs = language.glossary.hymt_pairs(task['source_text']) if language.glossary else []
-    return {'language_block': language.prompt_block(task['source_text']), 'term_pairs': pairs}
+    return {'language_block': language.prompt_block(task['source_text'], task), 'term_pairs': pairs}
 
 
 def _candidate_path(work_dir, gen, unit_id, budget, lang_inputs=None):
@@ -157,7 +157,7 @@ def refine_unit(task, window, cands, cfg, client, qe, misspelled_fn, allow, work
                            'problems': describe_issues(c['eval']['reasons'], c['eval']['misspelled'])} for c in drafts]}
     system, version = REFINE_SYSTEM, REFINE_VERSION
     if language is not None:
-        payload.update(language.prompt_block(task['source_text']))
+        payload.update(language.prompt_block(task['source_text'], task))
         system, version = REFINE_V3_SYSTEM, REFINE_V3_VERSION
     name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{version}'
     path = Path(work_dir) / 'cache' / 'refine' / name / f'{task["unit_id"]}__{sha256_json([payload, rcfg])[:10]}.json'
@@ -212,7 +212,7 @@ def rank_unit(task, cands, cfg, client, work_dir, language=None):
                'candidates': [{'id': i + 1, 'arabic': c['text']} for i, c in enumerate(shown)]}
     system, version = RANK_SYSTEM, RANK_VERSION
     if language is not None:
-        payload.update(language.prompt_block(task['source_text']))
+        payload.update(language.prompt_block(task['source_text'], task))
         system, version = RANK_V2_SYSTEM, RANK_V2_VERSION
     name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{version}'
     path = Path(work_dir) / 'cache' / 'rank' / name / f'{task["unit_id"]}__{sha256_json(payload)[:10]}.json'
@@ -250,7 +250,7 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
     payload = {'english_source': task['source_text'], 'arabic': chosen['text'],
                'target_letters_min': budget['min'], 'target_letters_max': budget['max'],
                'problems': language.issue_hints(task['source_text'], found),
-               **language.prompt_block(task['source_text'])}
+               **language.prompt_block(task['source_text'], task)}
     name = f'{client.provider}__{client.model.replace("/", "_").replace(":", "_")}__{POLISH_VERSION}'
     path = Path(work_dir) / 'cache' / 'polish' / name / f'{task["unit_id"]}__{sha256_json([payload, pcfg])[:10]}.json'
     if path.exists():
@@ -286,23 +286,34 @@ def polish_unit(task, window, chosen, cfg, client, qe, misspelled_fn, allow, wor
 
 # ------------------------------------------------------------------ 4. run
 def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client=None, rank_client=None,
-        glossary_client=None, repo_dir=None, run_label='', log=print):
+        glossary_client=None, course_memory=None, video_id=None, repo_dir=None, run_label='', log=print):
     """glossary_client: LLM that builds the glossary of the video when [language] glossary = "auto..."
-    (defaults to the refine client)."""
+    (defaults to the refine client).
+    course_memory: path of the course's terminology memory (JSON shared by all videos of a course);
+    the video's glossary reuses its terms and adds the new ones to it. video_id names this video there."""
     work_dir = Path(work_dir)
     tasks, windows, source_prep = prepare_sources(tasks, windows, cfg)     # V2: ASR fragments / spelled digits
-    auto_glossary, glossary_path = None, None
+    auto_glossary, glossary_path, subject = None, None, None
+    memory = CourseMemory(course_memory) if course_memory else None
     lc = cfg.get('language') or {}
     if str(lc.get('glossary', '')).startswith('auto'):
         builder = glossary_client or refine_client
         if builder is not None:
             try:
-                auto_glossary, glossary_path = build_glossary(tasks, builder, work_dir / 'cache', log=log)
+                auto_glossary, glossary_path, subject = build_glossary(
+                    tasks, builder, work_dir / 'cache', prior_terms=memory.terms if memory else (), log=log)
             except QuotaExhausted as exc:
                 log(f'[glossary] quota reached, no automatic glossary this run: {str(exc)[:120]}')
         else:
             log('[glossary] no LLM client: the automatic glossary is skipped')
+        if auto_glossary is None and memory is not None:
+            auto_glossary = memory.glossary()                 # at least the course's earlier decisions
     language = Language.from_config(cfg, auto_glossary=auto_glossary)
+    if language is not None:
+        language.subject = subject
+    if memory is not None and glossary_path is not None:
+        added = memory.update(read_json(glossary_path)['terms'], video_id or work_dir.parent.name, subject)
+        log(f'[glossary] course memory {memory.path}: +{added} terms, {len(memory.terms)} in total')
     cfg_hash = sha256_json(cfg)
     run_id = f'tr_{now_stamp()}_{cfg_hash[:8]}' + (f'_{run_label}' if run_label else '')
     run_dir = work_dir / 'runs' / run_id
@@ -318,7 +329,10 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
                 'language': None if language is None else {
                     'name': language.name, 'modes': language.modes,
                     'glossary_terms': len(language.glossary.terms) if language.glossary else 0,
-                    'glossary_file': str(glossary_path) if glossary_path else None}}
+                    'glossary_file': str(glossary_path) if glossary_path else None,
+                    'video_subject': subject,
+                    'course_memory': str(memory.path) if memory else None,
+                    'course_memory_terms': len(memory.terms) if memory else None}}
     write_json_once(run_dir / 'manifest.json', manifest)
     if language is not None and language.glossary is not None:
         write_json_once(run_dir / 'glossary.json', language.glossary.as_dict())

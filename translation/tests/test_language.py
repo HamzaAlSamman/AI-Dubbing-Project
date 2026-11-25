@@ -87,12 +87,53 @@ class GlossaryTests(unittest.TestCase):
         tasks = [{'unit_id': 'u0', 'source_text': 'y, the label, is 0 or 1'}]
         client = GlossaryClient()
         with tempfile.TemporaryDirectory() as tmp:
-            g1, path = build_glossary(tasks, client, tmp, log=lambda *_: None)
-            g2, _ = build_glossary(tasks, client, tmp, log=lambda *_: None)
+            g1, path, subject = build_glossary(tasks, client, tmp, log=lambda *_: None)
+            g2, _, _ = build_glossary(tasks, client, tmp, log=lambda *_: None)
+            self.assertEqual(subject, 'logistic regression notation')
             self.assertEqual(client.calls, 1)
             self.assertEqual(len(g1.terms), 3)
             self.assertEqual([t['ar'] for t in g1.terms], [t['ar'] for t in g2.terms])
             self.assertTrue(path.exists())
+
+
+class CourseMemoryTests(unittest.TestCase):
+    def test_terms_stay_the_same_across_videos(self):
+        from dubbing_translation.language import CourseMemory
+
+        class Agent:
+            provider, model = 'fake', 'terminology'
+
+            def __init__(self, terms):
+                self.terms, self.payloads = terms, []
+
+            def chat_json(self, system, user):
+                self.payloads.append(json.loads(user))
+                return {'subject': 'course', 'terms': self.terms}
+
+        with tempfile.TemporaryDirectory() as tmp:
+            mem_path = Path(tmp) / 'course' / 'glossary.json'
+            v1 = Agent([{'en': ['label'], 'ar': 'تسمية'}])
+            g1, path1, _ = build_glossary([{'unit_id': 'a', 'source_text': 'the label'}], v1, Path(tmp) / 'v1',
+                                          prior_terms=CourseMemory(mem_path).terms, log=lambda *_: None)
+            CourseMemory(mem_path).update(json.loads(path1.read_text(encoding='utf-8'))['terms'], 'video1')
+            # video 2: the agent proposes another rendering for 'label' and a new term
+            v2 = Agent([{'en': ['label'], 'ar': 'وسم'}, {'en': ['matrix'], 'ar': 'مصفوفة'}])
+            mem = CourseMemory(mem_path)
+            g2, path2, _ = build_glossary([{'unit_id': 'b', 'source_text': 'the label of the matrix'}], v2,
+                                          Path(tmp) / 'v2', prior_terms=mem.terms, log=lambda *_: None)
+            self.assertEqual(v2.payloads[0]['approved_terms_from_earlier_videos'], [{'en': ['label'], 'ar': 'تسمية'}])
+            self.assertEqual({t['id']: t['ar'] for t in g2.terms}, {'label': 'تسمية', 'matrix': 'مصفوفة'})
+            added = mem.update(json.loads(path2.read_text(encoding='utf-8'))['terms'], 'video2')
+            self.assertEqual(added, 1)
+            self.assertEqual([t['ar'] for t in CourseMemory(mem_path).terms], ['تسمية', 'مصفوفة'])
+            self.assertEqual(len(list((mem_path.parent / 'history').glob('*.json'))), 2)
+
+    def test_prompt_block_has_subject_and_speaker(self):
+        lang = Language(POLICY, Glossary.from_terms(TERMS, 'test'))
+        lang.subject = 'chemistry'
+        block = lang.prompt_block('the label', {'speaker_gender': 'female'})
+        self.assertEqual((block['video_subject'], block['speaker_gender']), ('chemistry', 'female'))
+        self.assertNotIn('speaker_gender', lang.prompt_block('the label', {}))
 
 
 class GateTests(unittest.TestCase):
@@ -152,7 +193,8 @@ class V2PipelineTests(unittest.TestCase):
         client = Client()
         gens = [FixedGen('mt', {'u0': wrong}), FixedGen('llm', {'u0': stiff})]
         run_dir, final, metrics = run(self.tasks, self.windows, CFG2, self.work, generators=gens, qe=qe,
-                                      speller=FakeSpeller(), refine_client=client, log=lambda *_: None)
+                                      speller=FakeSpeller(), refine_client=client, log=lambda *_: None,
+                                      course_memory=self.work / 'course' / 'glossary.json', video_id='lesson1')
         f = final[0]
         self.assertEqual(f['status'], 'accepted')
         self.assertEqual(f['natural_ar'], polished)                  # wrong term rejected, stiff line polished
@@ -163,6 +205,8 @@ class V2PipelineTests(unittest.TestCase):
         manifest = json.loads((run_dir / 'manifest.json').read_text(encoding='utf-8'))
         self.assertEqual(manifest['language']['glossary_terms'], 4)     # 3 of the video + 1 generic (lowercase)
         self.assertTrue((run_dir / 'glossary.json').exists())
+        self.assertEqual(manifest['language']['course_memory_terms'], 3)
+        self.assertEqual(manifest['language']['video_subject'], 'logistic regression notation')
 
 
     def test_compare_v1_v2_reads_both_runs(self):

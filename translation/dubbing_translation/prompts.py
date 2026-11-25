@@ -93,6 +93,9 @@ def describe_issues(reasons, misspelled=()):
 #   style_rules : the simple-MSA policy (configs/language/*.toml)
 #   glossary    : 'english -> approved arabic' lines for the terms in this unit (configs/glossaries/*.toml)
 _V2_RULES = (
+    "- If the input has video_subject, use the vocabulary of that subject as Arabic textbooks write it.\n"
+    "- If the input has speaker_gender, words the speaker says about himself or herself agree with it "
+    "(أنا متأكد / أنا متأكدة).\n"
     "- If the input has style_rules, follow them: simple, natural spoken Modern Standard Arabic, never dialect, "
     "no stiff translation patterns.\n"
     "- If the input has a glossary, use exactly those Arabic renderings for those English terms, in every "
@@ -100,7 +103,10 @@ _V2_RULES = (
 )
 
 ISOMETRIC_V2_VERSION = 'isometric_v2'
-ISOMETRIC_V2_SYSTEM = ISOMETRIC_SYSTEM.replace("Return only JSON", _V2_RULES + "Return only JSON")
+ISOMETRIC_V2_SYSTEM = ISOMETRIC_SYSTEM.replace(
+    "- Natural spoken Modern Standard Arabic; standard Arabic technical terms (e.g. متجه، مصفوفة، بكسل).\n",
+    "- Natural spoken Modern Standard Arabic; standard Arabic technical terms of the video's subject.\n"
+).replace("Return only JSON", _V2_RULES + "Return only JSON")
 
 REFINE_V3_VERSION = 'refine_v3'
 REFINE_V3_SYSTEM = REFINE_SYSTEM.replace("Never use the straight", _V2_RULES + "Never use the straight")
@@ -127,7 +133,7 @@ POLISH_SYSTEM = (
     'Return only JSON: {"natural_ar": "..."}'
 )
 
-GLOSSARY_VERSION = 'glossary_auto_v2'
+GLOSSARY_VERSION = 'glossary_auto_v3'
 GLOSSARY_SYSTEM = (
     "You are the terminology lead for the Arabic voice-over of an educational video. You receive the full "
     "English transcript (numbered units). Before anyone translates, build the glossary for THIS video:\n"
@@ -139,6 +145,8 @@ GLOSSARY_SYSTEM = (
     "names of the quantities (input, output, label, feature); prefer the rendering a general Arabic listener "
     "understands at once;\n"
     "- list wrong or misleading renderings to avoid (e.g. 'capital X' is a letter case, never رأس المال);\n"
+    "- if approved_terms_from_earlier_videos is given (same course), reuse exactly those renderings and do "
+    "not repeat them; list only terms that are new in this video;\n"
     "- do not list ordinary words, variable names or code; at most 40 terms.\n"
     'Return only JSON: {"subject": "...", "terms": [{"en": ["label", "labels"], "ar": "تسمية", '
     '"ar_forms": ["التسميات"], "avoid": ["الوسم"], "why": "short reason"}]}'
