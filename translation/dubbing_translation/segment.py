@@ -4,9 +4,9 @@ merge_fragments   : the ASR cut a sentence in two ("So if you take X1 and" | "yo
                     A unit is merged with the next one when it does not end a sentence (no . ? !) or the
                     next one starts in lower case. The merged unit keeps the ids of its parts
                     ("tu_0028+tu_0029") and the sum of their time windows, so the TTS stage can place it.
-fix_spelled_digits: the ASR wrote a number digit by digit ("1, 2, 2, 8, 8" for 12288). Four or more
-                    single digits separated by commas become one number. Lists of real numbers
-                    ("255, 231") have multi-digit items and are not touched.
+spelled_digit_flags: the ASR may write a number digit by digit ("1, 2, 2, 8, 8" for 12288). Four or more
+                    single digits separated by commas are only FLAGGED; the source is never rewritten,
+                    because the same pattern is also a real enumeration ("Steps 1, 2, 3, 4").
 """
 import re
 
@@ -49,31 +49,23 @@ def merge_fragments(tasks, windows, *, max_words=120):
     return out_t, out_w, merges
 
 
-def fix_spelled_digits(text):
-    """('... 12288 ...', ['1, 2, 2, 8, 8 -> 12288']) ; unchanged text gives an empty list."""
-    fixes = []
-
-    def repl(m):
-        digits = re.findall(r'\d', m.group(0))
-        fixes.append(f'{m.group(0)} -> {"".join(digits)}')
-        return ''.join(digits)
-
-    return _SPELLED.sub(repl, text or ''), fixes
+def find_spelled_digits(text):
+    """Spans that look like a number read digit by digit; the text itself is not changed."""
+    return [m.group(0) for m in _SPELLED.finditer(text or '')]
 
 
 def prepare_sources(tasks, windows, cfg):
     """Apply the [segmentation] options of the config. Returns (tasks, windows, report)."""
     scfg = cfg.get('segmentation') or {}
-    report = {'merges': [], 'digit_fixes': {}}
     if scfg.get('fix_spelled_digits'):
-        fixed = []
+        raise ValueError('segmentation.fix_spelled_digits was removed: the source is never rewritten. '
+                         'Use spelled_digits = "flag".')
+    report = {'merges': [], 'spelled_digit_flags': {}}
+    if scfg.get('spelled_digits', 'flag') == 'flag':
         for t in tasks:
-            text, fixes = fix_spelled_digits(t['source_text'])
-            if fixes:
-                report['digit_fixes'][t['unit_id']] = fixes
-                t = {**t, 'source_text': text, 'source_text_asr': t['source_text']}
-            fixed.append(t)
-        tasks = fixed
+            spans = find_spelled_digits(t['source_text'])
+            if spans:
+                report['spelled_digit_flags'][t['unit_id']] = spans
     if scfg.get('merge_fragments'):
         tasks, windows, report['merges'] = merge_fragments(tasks, windows, max_words=scfg.get('max_merged_words', 120))
     return tasks, windows, report

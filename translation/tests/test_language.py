@@ -239,10 +239,10 @@ class SegmentTests(unittest.TestCase):
         self.assertEqual((w['a+b'].slot_s, w['a+b'].window_s), (4.0, 4.7))
         self.assertEqual(len(merges), 1)
 
-    def test_spelled_digits(self):
-        from dubbing_translation.segment import fix_spelled_digits
-        self.assertEqual(fix_spelled_digits('to be 1, 2, 2, 8, 8. That')[0], 'to be 12288. That')
-        self.assertEqual(fix_spelled_digits('values 255, 231, and 1, 2, 3')[1], [])
+    def test_spelled_digits_are_found_not_fixed(self):
+        from dubbing_translation.segment import find_spelled_digits
+        self.assertEqual(find_spelled_digits('to be 1, 2, 2, 8, 8. That'), ['1, 2, 2, 8, 8'])
+        self.assertEqual(find_spelled_digits('values 255, 231, and 1, 2, 3'), [])
 
     def test_simplicity_findings(self):
         long_line = ' '.join(['كلمة'] * 30) + '.'

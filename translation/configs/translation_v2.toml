@@ -70,12 +70,13 @@ calques = "flag"             # stiff patterns: flagged, then removed by the guar
 simplicity = "flag"          # long sentences, rare words, mixed address: flagged, then polished
 
 [segmentation]
-# Fix ASR artefacts before translation. merge_fragments: a unit that does not end a sentence, or whose
-# next unit starts in lower case, is merged with it (ids "a+b", windows summed). fix_spelled_digits:
-# "1, 2, 2, 8, 8" (ASR digit by digit) -> 12288.
+# ASR artefacts before translation. The source text is never rewritten.
+# merge_fragments: a unit is merged with the next one only when the merge is safe (see segment.py);
+# doubtful cases are reported as suspected fragments, not merged.
+# spelled_digits = "flag": "1, 2, 2, 8, 8" (maybe 12288 read digit by digit) is flagged, not changed.
 merge_fragments = true
 max_merged_words = 120
-fix_spelled_digits = true
+spelled_digits = "flag"
 
 [polish]
 # Dubbing adaptation of an accepted line that still has stiff patterns: one LLM edit, kept only if it

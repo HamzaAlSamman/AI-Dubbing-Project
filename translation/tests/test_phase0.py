@@ -233,5 +233,46 @@ class ApiFailureTests(unittest.TestCase):
         self.assertNotIn('u0', out)
 
 
+
+# ---------------------------------------------------------------- P0-3 source numbers are never rewritten
+class SourceNumberTests(unittest.TestCase):
+    CASES = [
+        'Steps 1, 2, 3, 4 are shown on the slide.',
+        'The point (1, 2) and the point (3, 4) are close.',
+        'Pi is about 3.14 and e is about 2.718.',
+        'We set y = 2x + 1, then x = -5.',
+        'Install version 1.2.3 or 10.0.1 of the library.',
+        'which in this case turns out to be 1, 2, 2, 8, 8.',
+        'The dates 2026-11-25 and 25/11/2026 are the same day.',
+        'Use 1,000,000 samples, 50% of them for training.',
+    ]
+
+    def _prepare(self, text):
+        from dubbing_translation.io import V2_CONFIG, load_config
+        from dubbing_translation.segment import prepare_sources
+        from dubbing_translation.timing import Window
+        tasks = [{'unit_id': 'u0', 'source_text': text}]
+        return prepare_sources(tasks, {'u0': Window('u0', 3.0, 3.0)}, load_config(V2_CONFIG))
+
+    def test_source_text_is_never_changed(self):
+        for text in self.CASES:
+            tasks, _, rep = self._prepare(text)
+            self.assertEqual(tasks[0]['source_text'], text)
+            self.assertNotIn('source_text_asr', tasks[0])
+
+    def test_suspected_spelled_number_is_only_flagged(self):
+        _, _, rep = self._prepare('which in this case turns out to be 1, 2, 2, 8, 8.')
+        self.assertEqual(rep['spelled_digit_flags']['u0'], ['1, 2, 2, 8, 8'])
+        _, _, rep = self._prepare('Pi is about 3.14 and e is about 2.718.')
+        self.assertEqual(rep['spelled_digit_flags'], {})
+
+    def test_auto_fix_option_is_refused(self):
+        from dubbing_translation.segment import prepare_sources
+        from dubbing_translation.timing import Window
+        with self.assertRaises(ValueError):
+            prepare_sources([{'unit_id': 'u0', 'source_text': 'x'}], {'u0': Window('u0', 1.0, 1.0)},
+                            {'segmentation': {'fix_spelled_digits': True}})
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -25,7 +25,7 @@ from dubbing_translation.common import now_iso, read_json, sha256_json, write_js
 from dubbing_translation.generators import LLMClient, QuotaExhausted                      # noqa: E402
 from dubbing_translation.language import Language, Policy, build_glossary                 # noqa: E402
 from dubbing_translation.prompts import POLISH_SYSTEM, POLISH_VERSION                     # noqa: E402
-from dubbing_translation.segment import fix_spelled_digits, merge_fragments               # noqa: E402
+from dubbing_translation.segment import find_spelled_digits, merge_fragments               # noqa: E402
 from dubbing_translation.timing import Window                                             # noqa: E402
 from dubbing_translation.text import clean_translation                                    # noqa: E402
 
@@ -135,8 +135,8 @@ def main(argv=None):
     dummy = {t['unit_id']: Window(t['unit_id'], 1.0, 1.0) for t in tasks}
     summary['source_preparation'] = {
         'merge_fragments': [m['merged_from'] for m in merge_fragments(tasks, dummy)[2]],
-        'spelled_digits': {t['unit_id']: fix_spelled_digits(t['source_text'])[1] for t in tasks
-                           if fix_spelled_digits(t['source_text'])[1]}}
+        'spelled_digits': {t['unit_id']: find_spelled_digits(t['source_text']) for t in tasks
+                           if find_spelled_digits(t['source_text'])}}
     result = {'created_at': now_iso(), 'run_id': final.get('run_id'), 'glossary_file': str(gpath),
               'glossary': glossary.as_dict(), 'policy': lang.policy.version, 'summary': summary,
               'limits': ['polish preview is not meaning-checked (MetricX needs a GPU); run V2 on Colab',
