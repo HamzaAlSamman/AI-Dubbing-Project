@@ -34,7 +34,7 @@ LLM_STOP = (QuotaExhausted, TransientLLMError, PermanentLLMError, Authentication
 # a model answer that is not valid JSON: that unit's step is skipped, nothing is cached, the run is degraded
 LLM_SKIP = (InvalidLLMOutput,)
 from .language import CourseMemory, Glossary, Language, build_glossary, term_contexts
-from .contract import SCHEMA_VERSION, source_reference, validate_final
+from .contract import SCHEMA_VERSION, check_coverage, source_readiness, source_reference, validate_final
 from .segment import prepare_sources
 from .prompts import (LEGACY_KEY_VERSIONS, POLISH_SYSTEM, POLISH_VERSION, RANK_SYSTEM, RANK_V2_SYSTEM,
                       RANK_V2_VERSION, RANK_VERSION, REFINE_SYSTEM, REFINE_V3_SYSTEM, REFINE_V3_VERSION,
@@ -655,8 +655,9 @@ def run(tasks, windows, cfg, work_dir, *, generators, qe, speller, refine_client
             log(f'[glossary] course memory {memory.path}: {upd}')
     metrics['rank_changed_choice'] = rank_changed
     metrics['llm_calls_rank'] = getattr(rank_client, 'calls', 0) if rank_client else 0
+    manifest['source_readiness'] = source_readiness(source_refs)
     write_json_once(run_dir / 'manifest.json', manifest)
-    _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log)
+    _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log, source_refs)
     _append_registry(work_dir / 'registry.jsonl', manifest, metrics)
     if cfg.get('tracking', {}).get('mlflow'):
         _log_mlflow(cfg, manifest, metrics, run_dir, log)
@@ -735,13 +736,17 @@ def language_metrics(final):
             'polished_units': sum(bool(f.get('polished_from')) for f in final)}
 
 
-def _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log):
+def _write_outputs(run_dir, final, cands, metrics, tasks, manifest, refine_log, source_refs=None):
     doc = {'schema_version': SCHEMA_VERSION, 'run_id': manifest['run_id'],
            'config_sha256': manifest['config_sha256'], 'tasks_sha256': manifest['tasks_sha256'],
            'source_tasks_sha256': manifest.get('source_tasks_sha256', manifest['tasks_sha256']),
            'git_commit': manifest['git_commit'], 'created_at': now_iso(), 'human_approved': False,
            'degraded': bool((manifest.get('status') or {}).get('degraded')), 'units': final}
+    if source_refs is not None:
+        doc['source_readiness'] = source_readiness(source_refs)
     validate_final(doc)                                        # an invalid hand-off is a bug: stop here
+    if source_refs is not None:
+        check_coverage(doc, source_refs)                       # each original unit exactly once, unchanged
     write_json_once(run_dir / 'translation_final.json', doc)
     write_json_once(run_dir / 'metrics.json', metrics)
     if refine_log:

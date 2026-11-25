@@ -869,3 +869,48 @@ class DataContractTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+# ---------------------------------------------------------------- final checks: coverage and readiness
+class CoverageTests(unittest.TestCase):
+    """Each original unit exactly once, unchanged; missing timings recorded, never invented."""
+    setUp, tearDown = DataContractTests.setUp, DataContractTests.tearDown
+
+    def _refs(self):
+        from dubbing_translation.contract import source_reference
+        return {t['unit_id']: source_reference(t, self.timing.get(t['unit_id'])) for t in self.original}
+
+    def test_every_original_unit_appears_exactly_once(self):
+        from dubbing_translation.contract import check_coverage
+        order = [s['unit_id'] for u in self.doc['units'] for s in u['source_units']]
+        self.assertEqual(order, ['a', 'b', 'c'])
+        check_coverage(self.doc, self._refs())                          # passes on the real output
+
+    def test_coverage_check_catches_duplicates_losses_and_changed_timing(self):
+        import copy
+        from dubbing_translation.contract import check_coverage
+        refs = self._refs()
+        dup = copy.deepcopy(self.doc)
+        dup['units'].append(copy.deepcopy(dup['units'][-1]))
+        lost = copy.deepcopy(self.doc)
+        lost['units'] = lost['units'][:-1]
+        moved = copy.deepcopy(self.doc)
+        moved['units'][-1]['source_units'][0]['start'] = 99.0
+        retext = copy.deepcopy(self.doc)
+        retext['units'][-1]['source_units'][0]['source_text'] = 'Steps 1, 2, 2, 8, 8 follow.'
+        for bad in (dup, lost, moved, retext):
+            with self.assertRaises(ValueError):
+                check_coverage(bad, refs)
+
+    def test_readiness_separates_translation_test_from_audio_sync(self):
+        r = self.doc['source_readiness']
+        self.assertEqual((r['translation_test'], r['audio_sync'], r['word_alignment']), (True, True, False))
+        self.assertEqual(r['units_without_word_alignment'], ['b', 'c'])
+
+    def test_missing_timing_is_recorded_not_invented(self):
+        from dubbing_translation.contract import source_readiness, source_reference
+        refs = {t['unit_id']: source_reference(t, None) for t in self.original}
+        r = source_readiness(refs)
+        self.assertEqual((r['translation_test'], r['audio_sync']), (True, False))
+        self.assertEqual(r['units_without_timing'], ['a', 'b', 'c'])
+        self.assertTrue(all(v['start'] is None and v['end'] is None for v in refs.values()))
